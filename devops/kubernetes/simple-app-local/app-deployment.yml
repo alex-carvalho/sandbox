@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-webflux-todolist-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      component: spring-webflux-todolist
+  template:
+    metadata:
+      labels:
+        component: spring-webflux-todolist
+    spec:
+      containers:
+        - name: client  
+          image: alexcarvalhoac/spring-webflux-todolist
+          resources:
+            limits:
+              memory: "500Mi"
+              cpu: "100m"  
+          ports:
+            - containerPort: 8080

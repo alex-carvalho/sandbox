@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-web-todolist-postgres-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      component: spring-web-todolist-postgres
+  template:
+    metadata:
+      labels:
+        component: spring-web-todolist-postgres
+    spec:
+      containers:
+        - name: client  
+          image: alexcarvalhoac/spring-web-todolist-postgres
+          resources:
+            limits:
+              memory: "500Mi"
+              cpu: "100m"  
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: todolistdbpass
+                  key: PGPASSWORD
+            - name: DB_URL
+              value: postgres-cluster-ip-service
