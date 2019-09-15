@@ -18,6 +18,10 @@
     - H2 database
     - ORM panache
 
+- spring-batch-csv-to-mongo
+    - Spring Batch
+    - MongoDB
+    - Mongo Aggregations
 
 ### TODO
 - micronaut
