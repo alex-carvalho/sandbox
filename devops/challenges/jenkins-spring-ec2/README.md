@@ -1,0 +1,1 @@
+Jenkins DSL that that deploy a simple Spring Boot app (build, run tests, run sonnar and deploy in EC2) using terraform
