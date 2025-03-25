@@ -9,3 +9,8 @@ docker-compose up -d # Run localstack and Jenkins
 
 Java app code: https://github.com/alex-carvalho/sandbox/tree/master/samples/java/spring-web-3-j21
 
+
+
+## Required to run
+- Create in jenkins the secret `sonar-token`
+
