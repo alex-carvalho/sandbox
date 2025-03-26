@@ -47,21 +47,49 @@ pipeline {
                 }
             }
         }
-        
-        stage('Terraform Plan') {
+
+        stage('Upload artfact') {
+            steps {
+                dir("samples/java/spring-web-3-j21"){
+                    sh 'aws s3 cp build/libs/spring-web-3-j21-0.0.1-SNAPSHOT.jar s3://my-artifacts/app.jar'
+                }
+            }
+        }
+
+         stage('Terraform Init') {
             steps {
                 dir("devops/challenges/jenkins-spring-ec2/terraform-files") {
                     sh 'tflocal init'
-                    sh 'tflocal plan'
                 }
             }
         }
         
+        stage('Terraform Plan') {
+            steps {
+                dir("devops/challenges/jenkins-spring-ec2/terraform-files") {
+                    sh 'tflocal plan -input=false -no-color -out=plan.tfplan'
+                }
+            }
+        }
+
+        // stage('Terraform Aprove?') {
+        //     options {
+        //         timeout( time: 1, unit: 'MINUTES' )
+        //     }  
+        //     steps {
+        //         script {
+        //             input(
+        //                 message: 'Proceed with above Terraform Plan??',
+        //                 ok: 'Proceed'
+        //             )
+        //         }
+        //     }
+        // }
+        
         stage('Terraform Apply') {
             steps {
-                input message: 'Apply Terraform changes?', ok: 'Apply'
                 dir("devops/challenges/jenkins-spring-ec2/terraform-files") {
-                    sh 'tflocal apply -auto-approve'
+                    sh 'tflocal apply -auto-approve -input=false -no-color plan.tfplan'
                 }
             }
         }
