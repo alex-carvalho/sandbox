@@ -51,7 +51,7 @@ pipeline {
         stage('Upload artfact') {
             steps {
                 dir("samples/java/spring-web-3-j21"){
-                    sh 'aws s3 cp build/libs/spring-web-3-j21-0.0.1-SNAPSHOT.jar s3://my-artifacts/app.jar'
+                    sh 'aws s3 cp build/libs/spring-web-3-j21-0.0.1-SNAPSHOT.jar s3://my-artifacts/app.jar --checksum-algorithm SHA256'
                 }
             }
         }
