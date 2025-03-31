@@ -7,6 +7,7 @@ pipeline {
     
     environment {
         SONAR_TOKEN = credentials('sonar-token')
+        HARBOR_REGISTRY = 'harbor.local/my-project'
     }
     
     stages {
@@ -21,7 +22,7 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Build java') {
             steps {
                 dir("samples/java/spring-web-3-j21"){
                     sh './gradlew clean build -x test'
@@ -46,48 +47,18 @@ pipeline {
             }
         }
 
-        stage('Upload artfact') {
+        stage('Docker build') {
             steps {
                 dir("samples/java/spring-web-3-j21"){
-                    sh 'aws s3 cp build/libs/spring-web-3-j21-0.0.1-SNAPSHOT.jar s3://my-artifacts/app.jar --checksum-algorithm SHA256'
+                    sh 'docker build -t $HARBOR_REGISTRY/spring-web-3-j21:latest .'
                 }
             }
         }
 
-         stage('Terraform Init') {
+        stage('Docker push') {
             steps {
-                dir("devops/challenges/jenkins-spring-ec2/terraform-files") {
-                    sh 'tflocal init'
-                }
-            }
-        }
-        
-        stage('Terraform Plan') {
-            steps {
-                dir("devops/challenges/jenkins-spring-ec2/terraform-files") {
-                    sh 'tflocal plan -input=false -no-color -out=plan.tfplan'
-                }
-            }
-        }
-
-        // stage('Terraform Aprove?') {
-        //     options {
-        //         timeout( time: 1, unit: 'MINUTES' )
-        //     }  
-        //     steps {
-        //         script {
-        //             input(
-        //                 message: 'Proceed with above Terraform Plan??',
-        //                 ok: 'Proceed'
-        //             )
-        //         }
-        //     }
-        // }
-        
-        stage('Terraform Apply') {
-            steps {
-                dir("devops/challenges/jenkins-spring-ec2/terraform-files") {
-                    sh 'tflocal apply -auto-approve -input=false -no-color plan.tfplan'
+                dir("samples/java/spring-web-3-j21"){
+                    sh 'docker push $HARBOR_REGISTRY/spring-web-3-j21:latest '
                 }
             }
         }
