@@ -7,7 +7,7 @@ pipeline {
     
     environment {
         SONAR_TOKEN = credentials('sonar-token')
-        HARBOR_REGISTRY = 'harbor.local/my-project'
+        DOCKER_REGISTRY = 'localhost:5000'
     }
     
     stages {
@@ -50,7 +50,7 @@ pipeline {
         stage('Docker build') {
             steps {
                 dir("samples/java/spring-web-3-j21"){
-                    sh 'docker build -t $HARBOR_REGISTRY/spring-web-3-j21:latest .'
+                    sh 'docker build -t $DOCKER_REGISTRY/spring-web-3-j21:latest .'
                 }
             }
         }
@@ -58,7 +58,7 @@ pipeline {
         stage('Docker push') {
             steps {
                 dir("samples/java/spring-web-3-j21"){
-                    sh 'docker push $HARBOR_REGISTRY/spring-web-3-j21:latest '
+                    sh 'docker push $DOCKER_REGISTRY/spring-web-3-j21:latest '
                 }
             }
         }
