@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: localhost:5000/spring-web-3-j21
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 service:
   type: ClusterIP
