@@ -28,5 +28,5 @@ curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
 # test pod service running on cluster
 kubectl debug <pod> -it --image=nicolaka/netshoot
-curl http://spring-web-3-j21:8080/hello
+curl http://spring-web-3-j21/hello
 ```
