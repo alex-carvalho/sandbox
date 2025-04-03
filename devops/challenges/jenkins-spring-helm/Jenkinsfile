@@ -62,5 +62,22 @@ pipeline {
                 }
             }
         }
+
+        stage('Build Helm Chart') {
+            steps {
+                dir("helm/spring-web-3-j21") {
+                    sh 'helm lint .'
+                    sh 'helm package .'
+                }
+            }
+        }
+
+        stage('Deploy Helm Chart') {
+            steps {
+                dir("helm/spring-web-3-j21") {
+                    sh 'helm upgrade --install spring-web-3-j21 .
+                }
+            }
+        }
     }
 }

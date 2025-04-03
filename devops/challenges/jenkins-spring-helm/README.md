@@ -27,7 +27,3 @@ docker network connect kind my-registry
 
 curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 ```
-
-docker build -t localhost:5000/spring-web-3-j21:latest .
-docker push localhost:5000/spring-web-3-j21:latest
-kind load docker-image localhost:5000/spring-web-3-j21:latest
