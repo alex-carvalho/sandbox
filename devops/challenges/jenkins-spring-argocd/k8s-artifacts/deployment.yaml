@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-web-3-j21
+  labels:
+    app: spring-web-3-j21
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spring-web-3-j21
+  template:
+    metadata:
+      labels:
+        app: spring-web-3-j21
+    spec:
+      containers:
+        - name: spring-web-3-j21
+          image: ghcr.io/alex-carvalho/sandbox/spring-web-3-j21:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 200m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 2
