@@ -19,7 +19,6 @@ sudo mv ./kind /usr/local/bin/kind
 # create cluster
 kind create cluster --name kind-cluster
 
-
 # install argocd
 kubectl create namespace argocd
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
@@ -33,10 +32,20 @@ rm argocd-linux-amd64
 kubectl port-forward svc/argocd-server -n argocd 8080:443
 
 # get argocd initial password
-argocd admin initial-password -n argocd
+ARGO_INIT_PWD=$(argocd admin initial-password -n argocd)
 
+# login on argo cli
+argocd login localhost:8080 --username admin --password $ARGO_INIT_PWD --insecure
 
-argocd app create spring-web-3-j21 --repo https://github.com/alex-carvalho/sandbox.git --path devops/challenges/jenkins-spring-argocd/k8s-artifacts --dest-server https://kubernetes.default.svc --dest-namespace default
+# create the application on argocd
+argocd app create spring-web-3-j21 \
+  --repo https://github.com/alex-carvalho/sandbox.git \
+  --path devops/challenges/jenkins-spring-argocd/k8s-artifacts \
+  --dest-server https://kubernetes.default.svc \
+  --dest-namespace default \
+  --sync-policy automated \
+  --self-heal \
+  --auto-prune
 
 # test pod service running on cluster
 kubectl debug <pod> -it --image=nicolaka/netshoot
