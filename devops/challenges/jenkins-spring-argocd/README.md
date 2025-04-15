@@ -1,7 +1,6 @@
 ## Create a Jenkins DSL that can deploy a simple Spring Boot app (build, run tests, run sonnar and deploy in K8S) use ArgoCD
 
 
-
 ```shell
 
 alias k=kubectl
@@ -32,12 +31,12 @@ rm argocd-linux-amd64
 kubectl port-forward svc/argocd-server -n argocd 8080:443
 
 # get argocd initial password
-ARGO_INIT_PWD=$(argocd admin initial-password -n argocd)
+ARGO_INIT_PWD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d && echo)
 
 # login on argo cli
 argocd login localhost:8080 --username admin --password $ARGO_INIT_PWD --insecure
 
-# create the application on argocd
+# create the application on argocd using this command or apply the argo-application.yaml
 argocd app create spring-web-3-j21 \
   --repo https://github.com/alex-carvalho/sandbox.git \
   --path devops/challenges/jenkins-spring-argocd/k8s-artifacts \
@@ -46,6 +45,9 @@ argocd app create spring-web-3-j21 \
   --sync-policy automated \
   --self-heal \
   --auto-prune
+
+# or
+kubectl apply -f argo-application.yaml
 
 # test pod service running on cluster
 kubectl debug <pod> -it --image=nicolaka/netshoot

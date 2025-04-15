@@ -1,0 +1,75 @@
+pipeline {
+    agent any
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+    }
+    
+    environment {
+        SONAR_TOKEN = credentials('sonar-token')
+        DOCKER_REGISTRY = 'localhost:5000'
+    }
+    
+    stages {
+         stage('Checkout Code') {
+            steps {
+                script {
+                    checkout([$class: 'GitSCM',
+                        branches: [[name: '*/master']],
+                        userRemoteConfigs: [[url: 'https://github.com/alex-carvalho/sandbox']]]
+                    )
+                }
+            }
+        }
+
+        stage('Build java') {
+            steps {
+                dir("samples/java/spring-web-3-j21"){
+                    sh './gradlew clean build -x test'
+                }
+                
+            }
+        }
+        
+        // stage('Test') {
+        //     steps {
+        //         dir("samples/java/spring-web-3-j21"){
+        //             sh './gradlew test'
+        //         }
+        //     }
+        // }
+        
+        // stage('SonarQube Analysis') {
+        //     steps {
+        //         dir("samples/java/spring-web-3-j21"){
+        //             sh './gradlew sonar -Dsonar.token=$SONAR_TOKEN'
+        //         }
+        //     }
+        // }
+
+        stage('Docker build') {
+            steps {
+                dir("samples/java/spring-web-3-j21"){
+                    sh "docker build -t $DOCKER_REGISTRY/spring-web-3-j21:$BUILD_NUMBER ."
+                }
+            }
+        }
+
+        stage('Docker push') {
+            steps {
+                dir("samples/java/spring-web-3-j21"){
+                    sh "docker push $DOCKER_REGISTRY/spring-web-3-j21:$BUILD_NUMBER "
+                }
+            }
+        }
+
+        stage('Build Helm Chart') {
+            steps {
+                dir("devops/challenges/jenkins-spring-argocd/helm/spring-web-3-j21") {
+                    sh 'helm lint .'
+                    sh 'helm package .'
+                }
+            }
+        }
+    }
+}

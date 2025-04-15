@@ -1,34 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: spring-web-3-j21
+  name: {{ .Chart.Name }}
   labels:
-    app: spring-web-3-j21
+    app: {{ .Chart.Name }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: spring-web-3-j21
+      app: {{ .Chart.Name }}
   template:
     metadata:
       labels:
-        app: spring-web-3-j21
+        app: {{ .Chart.Name }}
     spec:
       containers:
-        - name: spring-web-3-j21
-          image: ghcr.io/alex-carvalho/sandbox/spring-web-3-j21:latest
-          imagePullPolicy: Always
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
               containerPort: 8080
               protocol: TCP
           resources:
-            limits:
-              cpu: 500m
-              memory: 512Mi
-            requests:
-              cpu: 200m
-              memory: 256Mi
+            {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
             httpGet:
               path: /actuator/health
