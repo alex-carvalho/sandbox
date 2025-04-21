@@ -7,7 +7,7 @@ pipeline {
     
     environment {
         SONAR_TOKEN = credentials('sonar-token')
-        DOCKER_REGISTRY = 'localhost:5000'
+        DOCKER_REGISTRY = 'ghcr.io/alex-carvalho/sandbox'
     }
     
     stages {
@@ -63,11 +63,15 @@ pipeline {
             }
         }
 
-        stage('Build Helm Chart') {
+        stage('Update chart value') {
             steps {
                 dir("devops/challenges/jenkins-spring-argocd/helm/spring-web-3-j21") {
-                    sh 'helm lint .'
-                    sh 'helm package .'
+                    sh '''
+                        sed -i "s/tag:.*/tag: ${BUILD_NUMBER}/" values.yaml
+                        git add values.yaml
+                        git commit -m "Update image tag to ${BUILD_NUMBER}"
+                        git push origin master
+                    '''
                 }
             }
         }
