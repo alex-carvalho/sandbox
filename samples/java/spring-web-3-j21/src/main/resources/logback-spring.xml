@@ -1,0 +1,29 @@
+<configuration scan="true">
+
+    <springProperty name="logstash_url" source="LOGSTASH_URL"/>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <if condition='isDefined("logstash_url")'>
+        <then>
+            <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+                <destination>${LOGSTASH_URL}</destination>
+                <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+            </appender>
+
+            <root level="INFO">
+                <appender-ref ref="LOGSTASH"/>
+            </root>
+        </then>
+        <else>
+            <root level="INFO">
+                <appender-ref ref="STDOUT"/>
+            </root>
+        </else>
+    </if>
+
+</configuration>
