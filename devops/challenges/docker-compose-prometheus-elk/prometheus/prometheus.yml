@@ -3,5 +3,6 @@ global:
 
 scrape_configs:
   - job_name: 'java-app'
+    metrics_path: /actuator/prometheus
     static_configs:
       - targets: ['java-app:8080']
