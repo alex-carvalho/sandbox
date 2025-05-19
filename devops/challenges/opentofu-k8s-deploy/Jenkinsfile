@@ -1,0 +1,74 @@
+pipeline {
+    agent any
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+    }
+    
+    environment {
+        DOCKER_REGISTRY = 'ghcr.io/alex-carvalho/sandbox'
+    }
+    
+    stages {
+         stage('Checkout Code') {
+            steps {
+                script {
+                    checkout([$class: 'GitSCM',
+                        branches: [[name: '*/master']],
+                        userRemoteConfigs: [[url: 'https://github.com/alex-carvalho/sandbox']]]
+                    )
+                }
+            }
+        }
+
+        stage('Build java') {
+            steps {
+                dir("samples/java/spring-web-3-j21"){
+                    sh './gradlew clean build -x test'
+                }
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                dir("samples/java/spring-web-3-j21"){
+                    sh './gradlew test'
+                }
+            }
+        }
+        
+
+        stage('Docker build') {
+            steps {
+                dir("samples/java/spring-web-3-j21"){
+                    sh "docker build -t $DOCKER_REGISTRY/spring-web-3-j21:$BUILD_NUMBER ."
+                }
+            }
+        }
+
+        stage('Docker push') {
+            steps {
+                dir("samples/java/spring-web-3-j21"){
+                    sh "docker push $DOCKER_REGISTRY/spring-web-3-j21:$BUILD_NUMBER "
+                }
+            }
+        }
+
+        stage('Build Helm Chart') {
+            steps {
+                dir("devops/challenges/opentofu-k8s-deploy/helm/app") {
+                    sh 'helm lint .'
+                    sh 'helm package .'
+                }
+            }
+        }
+
+        stage('Deploy Helm Chart') {
+            steps {
+                dir("devops/challenges/opentofu-k8s-deploy/helm/app") {
+                    sh 'helm upgrade --install java-app .'
+                }
+            }
+        }
+    }
+}

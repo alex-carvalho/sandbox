@@ -1,6 +1,12 @@
 
+variable "prefix" {
+  type    = string
+  default = ""
+  description = "Used on tests to change the name of the resources"
+}
+
 resource "kind_cluster" "default" {
-    name = "poc-cluster"
+    name = "${var.prefix}kind-cluster"
 }
 
 resource "kubernetes_namespace" "apps" {
