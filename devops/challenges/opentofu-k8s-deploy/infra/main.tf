@@ -6,7 +6,7 @@ variable "prefix" {
 }
 
 resource "kind_cluster" "default" {
-    name = "${var.prefix}kind-cluster"
+    name = "${var.prefix}poc-kind-cluster"
 }
 
 resource "kubernetes_namespace" "apps" {
