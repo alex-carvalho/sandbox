@@ -1,0 +1,5 @@
+checks:
+  exclude:
+    - "no-anti-affinity"
+  include:
+    - "use-namespace"
