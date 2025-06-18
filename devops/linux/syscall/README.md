@@ -69,7 +69,6 @@ gcc network_examples.c -o bin/network_examples
 python3 network_examples.py 
 
 
-
 gcc process_management_examples.c -o bin/process_management_examples
 ./bin/process_management_examples
 python3 process_management_examples.py 
