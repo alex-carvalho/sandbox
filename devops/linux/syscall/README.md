@@ -22,7 +22,7 @@ Here are the most commonly used Linux syscalls and their purposes:
 ## Memory Management
 - `mmap()` - Maps files or devices into memory
 - `munmap()` - Unmaps files or devices from memory
-- `brk()` - Changes data segment size
+- `brk()` - Changes data segment size, used internaly by mmap, not often used in code
 - `mprotect()` - Sets protection on a region of memory
 
 ## File System Operations
@@ -61,15 +61,3 @@ Here are the most commonly used Linux syscalls and their purposes:
 - `chroot()` - Changes root directory
 
 Note: This is a subset of the most commonly used syscalls. Linux has over 300 system calls in total.
-
-
-``` shell
-gcc network_examples.c -o bin/network_examples
-./bin/network_examples
-python3 network_examples.py 
-
-
-gcc process_management_examples.c -o bin/process_management_examples
-./bin/process_management_examples
-python3 process_management_examples.py 
-```
