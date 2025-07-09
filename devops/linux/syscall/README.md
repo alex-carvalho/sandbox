@@ -28,8 +28,10 @@ Here are the most commonly used Linux syscalls and their purposes:
 ## File System Operations
 - `mkdir()` - Creates a directory
 - `rmdir()` - Removes a directory
-- `link()` - Creates a hard link to a file
-- `symlink()` - Creates a symbolic link
+- `link()` - Creates a hard link to a file  
+    **Hard link:** Points directly to the file's data on disk. Multiple hard links to a file share the same inode and data; deleting one does not remove the file as long as another exists.
+- `symlink()` - Creates a symbolic link  
+    **Symbolic link (symlink):** Points to a file path, not the file's data. If the target file is deleted, the symlink becomes broken.
 - `chmod()` - Changes permissions of a file
 - `chown()` - Changes ownership of a file
 
