@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/alex-carvalho/sandbox.git
     targetRevision: HEAD
-    path: devops/gitops/argocd/examples/guestbook
+    path: devops/gitops/argocd/examples/guestbook/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: apps
