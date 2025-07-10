@@ -23,3 +23,18 @@ __Application Controller__
 
 ### ArgoCD Architecture Component
 ![ArgoCD Architecture Component](argocd-architecture-component.png)
+
+
+### ArgoCD Phases and Waves 
+
+**Phases**
+- pre-sync
+- sync
+- post-sync
+
+**Waves**
+
+- The phase
+- The wave they are in (lower values first for creation & updation and higher values first for deletion)
+- By kind [(e.g. namespaces first and then other Kubernetes resources, followed by custom resources)](https://github.com/argoproj/gitops-engine/blob/bc9ce5764fa306f58cf59199a94f6c968c775a2d/pkg/sync/sync_tasks.go#L27-L66)
+- By name 

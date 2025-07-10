@@ -1,0 +1,16 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: my-pre-sync-job
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    # argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  template:
+    spec:
+      containers:
+        - name: my-pre-sync-job
+          image: busybox
+          command: ["echo", "Hello from my-pre-sync-job"]
+      restartPolicy: Never
+  backoffLimit: 0

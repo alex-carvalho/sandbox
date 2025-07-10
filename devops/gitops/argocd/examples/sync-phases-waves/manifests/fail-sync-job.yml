@@ -1,0 +1,16 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: my-fail-sync-job
+  annotations:
+    argocd.argoproj.io/hook: PostSyncFail
+    # argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  template:
+    spec:
+      containers:
+        - name: my-fail-sync-job
+          image: busybox
+          command: ["echo", "Hello from my-fail-sync-job"]
+      restartPolicy: Never
+  backoffLimit: 0
