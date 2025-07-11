@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: waves-application
+  namespace: argocd # needs to go to argocd namespace where ArgoCD is installed
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/alex-carvalho/sandbox.git
+    targetRevision: HEAD
+    path: devops/gitops/argocd/examples/sync-phases-waves/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: apps
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

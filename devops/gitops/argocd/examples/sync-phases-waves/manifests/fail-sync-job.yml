@@ -4,7 +4,7 @@ metadata:
   name: my-fail-sync-job
   annotations:
     argocd.argoproj.io/hook: PostSyncFail
-    # argocd.argoproj.io/hook-delete-policy: HookSucceeded
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
 spec:
   template:
     spec:
