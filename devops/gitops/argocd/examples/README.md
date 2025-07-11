@@ -23,16 +23,18 @@ k port-forward svc/argocd-server -n argocd 8080:443
 # retrive initial admin argocd password
 argocd admin initial-password -n argocd
 
+# update account password
+argocd account update-password
+
 # login on cli ignore certificate autosigned
 argocd login localhost:8080 --insecure
 
 # check list apps running, should be empty 
 argocd app list
 
-
 # install apps, we can use the argocd cli or apply a kube resource
 # argocd app create guestbook --repo https://github.com/argoproj/argocd-example-apps.git --path guestbook --dest-server https://kubernetes.default.svc --dest-namespace default
-k apply -f ./guestbook-application.yaml
+k apply -f ./examples/guestbook/guestbook-application.yaml
 
 # now can list aplication on argcli 
 argocd app list

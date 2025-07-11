@@ -6,9 +6,6 @@
 - Keep the desired state in git repository in sync with kubernetes
 - Pull based
 
-## ArgoCD Architecture
-![ArgoCD Architecture](argocd-architecture.png)
-
 ### Components
 
 __API Server__
@@ -20,10 +17,36 @@ __Repository Server__
 __Application Controller__
 - is a Kubernetes controller which continuously monitors running applications and compares the current
 
+## ArgoCD Architecture
+![ArgoCD Architecture](images/argocd-architecture.png)
 
 ### ArgoCD Architecture Component
-![ArgoCD Architecture Component](argocd-architecture-component.png)
+![ArgoCD Architecture Component](images/argocd-architecture-component.png)
 
+### ArgoCD Sync Options
+
+Argo CD polls Git repositories every three minutes to detect changes to the manifests. 
+To eliminate this delay from polling, the API server can be configured to receive webhook events.
+
+``` yml
+spec:
+  syncPolicy:
+    automated:
+        prune: true
+        selfHeal: true
+    syncOptions:
+      - Replace=true
+      - CreateNamespace=true
+      - PruneLast=true
+      - ApplyOutOfSyncOnly=true
+```
+
+**Resource Level**
+```yml
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false
+```
 
 ### ArgoCD Phases and Waves 
 
@@ -31,6 +54,7 @@ __Application Controller__
 - pre-sync
 - sync
 - post-sync
+- post-sync-fail
 
 **Waves**
 
@@ -38,3 +62,14 @@ __Application Controller__
 - The wave they are in (lower values first for creation & updation and higher values first for deletion)
 - By kind [(e.g. namespaces first and then other Kubernetes resources, followed by custom resources)](https://github.com/argoproj/gitops-engine/blob/bc9ce5764fa306f58cf59199a94f6c968c775a2d/pkg/sync/sync_tasks.go#L27-L66)
 - By name 
+
+
+
+### ArgoCD Projects
+
+- clusterResourceWhitelist
+- namespaceResourceBlacklist
+- namespaceResourceWhitelist
+- destinations
+- sourceRepos
+- roles

@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: my-project
+  namespace: argocd
+spec:
+  clusterResourceWhitelist:
+  - group: '*'
+    kind: '*'
+
+  namespaceResourceBlacklist:
+  - group: ''
+    kind: 'ServiceAccount' ## it means we are NOT allowd to use 'serviceaccount' namespacescoped resource
+  
+  namespaceResourceWhitelist:
+  - group: ''
+    kind: 'Deployment' ## it means we are allowed to use 'deployment' namespacescoped resource
+
+  destinations:
+  - namespace: '!dev' ## Use '!' to place namespace in BlackList, if we remove '!' the namespace will be placed in WhiteList
+    server: '*' ## '*' means we are allowed to use any servers
+  
+  sourceRepos:
+  - 'https://github.com/alex-carvalho/sandbox.git'
+
+  roles:
+    - name: read-sync
+      description: "this role can be used for reading applications"
+      policies:
+        - p, proj:my-project:read-sync, applications, get, my-project/*, allow
+        - p, proj:my-project:read-sync, applications, sync, my-project/*, allow
