@@ -15,7 +15,7 @@ resource "argocd_application" "application" {
 
     source {
       repo_url        = "https://github.com/alex-carvalho/sandbox.git"
-      path            = "devops/gitops/argocd/examples/sync-phases-waves/manifests"
+      path            = "devops/gitops/argocd/examples/guestbook/manifests"
       target_revision = "HEAD"
     }
     sync_policy {
