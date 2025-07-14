@@ -38,3 +38,6 @@ out/
 ### VS Code ###
 .vscode/
 .terraform
+terraform.tfstate
+terraform.tfstate.backup
+poc-*-cluster-config
