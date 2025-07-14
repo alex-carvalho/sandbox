@@ -18,11 +18,12 @@ resource "argocd_application" "application" {
       path            = "devops/gitops/argocd/examples/guestbook/manifests"
       target_revision = "HEAD"
     }
-    sync_policy {
-      automated {
-        prune     = true
-        self_heal = true
-      }
-    }
+    # uncomment the following lines to enable sync policy
+    # sync_policy {
+    #   automated {
+    #     prune     = true
+    #     self_heal = true
+    #   }
+    # }
   }
 }
