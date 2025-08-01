@@ -1,0 +1,46 @@
+controller:
+  installPlugins:
+    - kubernetes
+    - workflow-aggregator
+    - git
+    - docker-workflow
+    - blueocean
+    - configuration-as-code
+    - credentials-binding
+    - gradle
+    - github
+  admin:
+    username: admin
+    password: admin
+  serviceType: NodePort
+  ingress:
+    enabled: false
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1
+      memory: 2Gi
+  JCasC:
+    enabled: true
+agent:
+  enabled: true
+  runAsUser: 0
+  image:
+    registry: ghcr.io
+    repository: alex-carvalho/sandbox/jenkins-agent
+    tag: latest
+    pullPolicy: Always
+  customJenkinsLabels: "infra jenkins"
+  privileged: true
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1
+      memory: 2Gi
+persistence:
+  enabled: true
+  size: 8Gi

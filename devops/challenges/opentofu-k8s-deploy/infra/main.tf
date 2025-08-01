@@ -49,3 +49,16 @@ resource "helm_release" "grafana" {
     value = "ClusterIP"
   }
 }
+
+resource "helm_release" "jenkins" {
+  name       = "jenkins"
+  namespace  = kubernetes_namespace.infra.metadata[0].name
+  repository = "https://charts.jenkins.io"
+  chart      = "jenkins"
+  version    = "5.8.73"
+  create_namespace = false
+  values = [
+    file("${path.module}/jenkins-values.yaml")
+  ]
+  depends_on = [kind_cluster.default]
+}
