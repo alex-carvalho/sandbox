@@ -50,6 +50,32 @@ resource "helm_release" "grafana" {
   }
 }
 
+variable "ghcr_username" {
+  type        = string
+  description = "GitHub Container Registry username"
+  default     = "alex-carvalho"
+}
+
+variable "ghcr_token" {
+  type        = string
+  description = "GitHub Container Registry token"
+  sensitive   = true
+}
+
+resource "kubernetes_secret" "ghcr" {
+  metadata {
+    name      = "jenkins-ghcr-secret"
+    namespace = kubernetes_namespace.infra.metadata[0].name
+  }
+
+  data = {
+    username = var.ghcr_username
+    token    = var.ghcr_token
+  }
+
+  type = "Opaque"
+}
+
 resource "helm_release" "jenkins" {
   name       = "jenkins"
   namespace  = kubernetes_namespace.infra.metadata[0].name

@@ -23,8 +23,8 @@ pipeline {
 
         stage('Build java') {
             steps {
-                dir("samples/java/spring-web-3-j21"){
-                    sh './gradlew clean build -x test'
+                dir("samples/java/spring-web-3-j21"){   
+                    sh 'gradle clean build -x test --no-daemon'
                 }
             }
         }
@@ -32,11 +32,18 @@ pipeline {
         stage('Test') {
             steps {
                 dir("samples/java/spring-web-3-j21"){
-                    sh './gradlew test'
+                    sh 'gradle test --no-daemon'
                 }
             }
         }
-        
+
+        stage('Login to GHCR') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'ghcr-creds', usernameVariable: 'GHCR_USER', passwordVariable: 'GHCR_TOKEN')]) {
+                    sh 'echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USER --password-stdin'
+                }
+            }
+        }
 
         stage('Docker build') {
             steps {
