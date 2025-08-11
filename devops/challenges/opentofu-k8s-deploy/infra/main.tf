@@ -1,24 +1,18 @@
 
-variable "prefix" {
-  type    = string
-  default = ""
-  description = "Used on tests to change the name of the resources"
-}
-
 resource "kind_cluster" "default" {
-    name = "${var.prefix}poc-kind-cluster"
+  name = "${var.prefix}poc-kind-cluster"
 }
 
 resource "kubernetes_namespace" "apps" {
-    metadata {
-        name = "apps"
-    }
+  metadata {
+    name = "apps"
+  }
 }
 
 resource "kubernetes_namespace" "infra" {
-    metadata {
-        name = "infra"
-    }
+  metadata {
+    name = "infra"
+  }
 }
 
 resource "helm_release" "prometheus" {
@@ -50,41 +44,17 @@ resource "helm_release" "grafana" {
   }
 }
 
-variable "ghcr_username" {
-  type        = string
-  description = "GitHub Container Registry username"
-  default     = "alex-carvalho"
-}
-
-variable "ghcr_token" {
-  type        = string
-  description = "GitHub Container Registry token"
-  sensitive   = true
-}
-
-resource "kubernetes_secret" "ghcr" {
-  metadata {
-    name      = "jenkins-ghcr-secret"
-    namespace = kubernetes_namespace.infra.metadata[0].name
-  }
-
-  data = {
-    username = var.ghcr_username
-    token    = var.ghcr_token
-  }
-
-  type = "Opaque"
-}
-
 resource "helm_release" "jenkins" {
-  name       = "jenkins"
-  namespace  = kubernetes_namespace.infra.metadata[0].name
-  repository = "https://charts.jenkins.io"
-  chart      = "jenkins"
-  version    = "5.8.73"
+  name             = "jenkins"
+  namespace        = kubernetes_namespace.infra.metadata[0].name
+  repository       = "https://charts.jenkins.io"
+  chart            = "jenkins"
+  version          = "5.8.73"
   create_namespace = false
+  
   values = [
     file("${path.module}/jenkins-values.yaml")
   ]
+  
   depends_on = [kind_cluster.default]
 }

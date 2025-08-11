@@ -12,7 +12,9 @@ controller:
     - github
   admin:
     username: admin
-    password: admin
+    existingSecret: jenkins-admin-secret
+    userKey: username
+    passwordKey: password
   serviceType: NodePort
   ingress:
     enabled: false
@@ -28,6 +30,8 @@ controller:
       keyName: username
     - name: jenkins-ghcr-secret
       keyName: token
+    - name: jenkins-admin-secret
+      keyName: password
   JCasC:
     enabled: true
     configScripts:

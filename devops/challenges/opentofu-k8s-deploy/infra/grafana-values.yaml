@@ -9,3 +9,27 @@ datasources:
         access: proxy
         url: http://prometheus-server.infra.svc.cluster.local
         isDefault: true
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+
+dashboards:
+  default:
+    jvm-dashboard:
+      gnetId: 4701
+      revision: 1
+      datasource: Prometheus
+    kubernetes-cluster:
+      gnetId: 15661
+      revision: 1
+      datasource: Prometheus
