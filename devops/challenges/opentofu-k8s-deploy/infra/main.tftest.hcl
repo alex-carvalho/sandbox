@@ -1,6 +1,8 @@
 
 variables {
   prefix = "test-"
+  ghcr_token = "ghp_xxxxxxx"
+  jenkins_admin_password = "foo"
 }
 
 run "namespace_infra" {
