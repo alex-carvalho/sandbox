@@ -42,18 +42,12 @@ pipeline {
         }
 
         stage('Approval') {
-            when {
-                branch 'master'
-            }
             steps {
                 input message: 'Apply OpenTofu changes?', ok: 'Apply'
             }
         }
 
         stage('OpenTofu Apply') {
-            when {
-                branch 'master'
-            }
             steps {
                 dir('devops/challenges/opentofu-k8s-deploy/infra') {
                     withCredentials([
