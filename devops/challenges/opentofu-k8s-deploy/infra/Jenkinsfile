@@ -43,7 +43,7 @@ pipeline {
 
         stage('Approval') {
             when {
-                branch 'main'
+                branch 'master'
             }
             steps {
                 input message: 'Apply OpenTofu changes?', ok: 'Apply'
@@ -52,7 +52,7 @@ pipeline {
 
         stage('OpenTofu Apply') {
             when {
-                branch 'main'
+                branch 'master'
             }
             steps {
                 dir('devops/challenges/opentofu-k8s-deploy/infra') {
