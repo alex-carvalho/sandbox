@@ -41,12 +41,6 @@ pipeline {
             }
         }
 
-        stage('Approval') {
-            steps {
-                input message: 'Apply OpenTofu changes?', ok: 'Apply'
-            }
-        }
-
         stage('OpenTofu Apply') {
             steps {
                 dir('devops/challenges/opentofu-k8s-deploy/infra') {
