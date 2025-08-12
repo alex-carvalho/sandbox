@@ -1,6 +1,8 @@
 
 resource "kind_cluster" "default" {
   name = "${var.prefix}poc-kind-cluster"
+  ghcr_token = "ghp_xxxxxxx"
+  jenkins_admin_password = "foo"
 }
 
 resource "kubernetes_namespace" "apps" {
