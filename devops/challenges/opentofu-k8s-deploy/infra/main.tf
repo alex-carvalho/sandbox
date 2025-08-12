@@ -35,7 +35,7 @@ resource "helm_release" "grafana" {
   create_namespace = false
 
   values = [
-    file("${path.module}/grafana-values.yaml")
+    file("${path.module}/values/grafana-values.yaml")
   ]
 
   set {
@@ -53,7 +53,7 @@ resource "helm_release" "jenkins" {
   create_namespace = false
   
   values = [
-    file("${path.module}/jenkins-values.yaml")
+    file("${path.module}/values/jenkins-values.yaml")
   ]
   
   depends_on = [kind_cluster.default]

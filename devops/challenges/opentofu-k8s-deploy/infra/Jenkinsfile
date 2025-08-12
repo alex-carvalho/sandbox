@@ -1,0 +1,67 @@
+pipeline {
+    agent any
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('OpenTofu Init') {
+            steps {
+                dir('devops/challenges/opentofu-k8s-deploy/infra') {
+                    sh 'tofu init'
+                }
+            }
+        }
+
+        stage('OpenTofu Test') {
+            steps {
+                dir('devops/challenges/opentofu-k8s-deploy/infra') {
+                    sh 'tofu test'
+                }
+            }
+        }
+
+        stage('OpenTofu Plan') {
+            steps {
+                dir('devops/challenges/opentofu-k8s-deploy/infra') {
+                    sh 'tofu plan -out=tfplan'
+                }
+            }
+        }
+
+        stage('Approval') {
+            when {
+                branch 'main'
+            }
+            steps {
+                input message: 'Apply OpenTofu changes?', ok: 'Apply'
+            }
+        }
+
+        stage('OpenTofu Apply') {
+            when {
+                branch 'main'
+            }
+            steps {
+                dir('devops/challenges/opentofu-k8s-deploy/infra') {
+                    sh 'tofu apply -auto-approve tfplan'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            dir('devops/challenges/opentofu-k8s-deploy/infra') {
+                sh 'rm -f tfplan'
+            }
+        }
+    }
+}
