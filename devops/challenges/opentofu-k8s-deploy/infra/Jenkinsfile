@@ -31,7 +31,12 @@ pipeline {
         stage('OpenTofu Plan') {
             steps {
                 dir('devops/challenges/opentofu-k8s-deploy/infra') {
-                    sh 'tofu plan -out=tfplan'
+                    withCredentials([
+                        string(credentialsId: 'ghcr-token', variable: 'TF_VAR_ghcr_token'),
+                        string(credentialsId: 'jenkins-admin-password', variable: 'TF_VAR_jenkins_admin_password')
+                    ]) {
+                        sh 'tofu plan -out=tfplan'
+                    }
                 }
             }
         }
@@ -51,7 +56,12 @@ pipeline {
             }
             steps {
                 dir('devops/challenges/opentofu-k8s-deploy/infra') {
-                    sh 'tofu apply -auto-approve tfplan'
+                    withCredentials([
+                        string(credentialsId: 'ghcr-token', variable: 'TF_VAR_ghcr_token'),
+                        string(credentialsId: 'jenkins-admin-password', variable: 'TF_VAR_jenkins_admin_password')
+                    ]) {
+                        sh 'tofu apply -auto-approve tfplan'
+                    }
                 }
             }
         }
