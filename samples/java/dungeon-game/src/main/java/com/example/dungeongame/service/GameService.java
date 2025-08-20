@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 @Service
 public class GameService {
@@ -46,5 +47,13 @@ public class GameService {
 
         game.setMinimumHp(dp[0][0]);
         return gameRepository.save(game);
+    }
+
+    public Game saveGame(Game game) {
+        return gameRepository.save(game);
+    }
+
+    public Optional<Game> findGameById(Long id) {
+        return gameRepository.findById(id);
     }
 }

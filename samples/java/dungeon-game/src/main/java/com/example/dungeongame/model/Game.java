@@ -16,6 +16,8 @@ public class Game {
 
     private int minimumHp;
 
+    private String name;
+
     public Long getId() {
         return id;
     }
@@ -38,5 +40,13 @@ public class Game {
 
     public void setMinimumHp(int minimumHp) {
         this.minimumHp = minimumHp;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 }
