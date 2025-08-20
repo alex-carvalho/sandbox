@@ -15,7 +15,7 @@ public class GameController {
 
     @PostMapping("/game")
     public Game calculateMinimumHP(@RequestBody DungeonRequest request) {
-        return gameService.calculateMinimumHP(request.getDungeon());
+        return gameService.calculate(request.getDungeon());
     }
 }
 
