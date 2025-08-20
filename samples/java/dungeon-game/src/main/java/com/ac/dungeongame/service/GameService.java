@@ -1,7 +1,7 @@
-package com.example.dungeongame.service;
+package com.ac.dungeongame.service;
 
-import com.example.dungeongame.model.Game;
-import com.example.dungeongame.repository.GameRepository;
+import com.ac.dungeongame.model.Game;
+import com.ac.dungeongame.repository.GameRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

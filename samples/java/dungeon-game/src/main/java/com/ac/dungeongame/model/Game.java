@@ -1,4 +1,4 @@
-package com.example.dungeongame.model;
+package com.ac.dungeongame.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -15,8 +15,6 @@ public class Game {
     private String dungeon;
 
     private int minimumHp;
-
-    private String name;
 
     public Long getId() {
         return id;
@@ -40,13 +38,5 @@ public class Game {
 
     public void setMinimumHp(int minimumHp) {
         this.minimumHp = minimumHp;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 }

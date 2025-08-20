@@ -1,6 +1,6 @@
-package com.example.dungeongame.repository;
+package com.ac.dungeongame.repository;
 
-import com.example.dungeongame.model.Game;
+import com.ac.dungeongame.model.Game;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface GameRepository extends JpaRepository<Game, Long> {

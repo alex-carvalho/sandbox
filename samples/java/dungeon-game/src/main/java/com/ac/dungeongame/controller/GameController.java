@@ -1,7 +1,7 @@
-package com.example.dungeongame.controller;
+package com.ac.dungeongame.controller;
 
-import com.example.dungeongame.model.Game;
-import com.example.dungeongame.service.GameService;
+import com.ac.dungeongame.model.Game;
+import com.ac.dungeongame.service.GameService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

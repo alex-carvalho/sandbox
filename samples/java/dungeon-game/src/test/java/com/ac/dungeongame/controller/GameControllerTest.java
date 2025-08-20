@@ -1,7 +1,7 @@
-package com.example.dungeongame.controller;
+package com.ac.dungeongame.controller;
 
-import com.example.dungeongame.model.Game;
-import com.example.dungeongame.service.GameService;
+import com.ac.dungeongame.model.Game;
+import com.ac.dungeongame.service.GameService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
