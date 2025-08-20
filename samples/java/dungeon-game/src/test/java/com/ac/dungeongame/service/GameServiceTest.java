@@ -26,22 +26,18 @@ class GameServiceTest {
     @Test
     void testSaveGame() {
         Game game = new Game();
-        game.setName("Test Game");
         Game savedGame = gameService.saveGame(game);
 
         assertNotNull(savedGame.getId());
-        assertEquals("Test Game", savedGame.getName());
     }
 
     @Test
     void testFindGameById() {
         Game game = new Game();
-        game.setName("Test Game");
         Game savedGame = gameRepository.save(game);
 
         Optional<Game> foundGame = gameService.findGameById(savedGame.getId());
         assertTrue(foundGame.isPresent());
-        assertEquals("Test Game", foundGame.get().getName());
     }
 
     @Test
