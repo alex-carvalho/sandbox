@@ -8,13 +8,21 @@ import com.ac.dungeongame.model.Game;
 import com.ac.dungeongame.repository.AlgorithmExecutionRepository;
 import com.ac.dungeongame.repository.GameRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class GameService {
+
+    private Logger logger = LoggerFactory.getLogger(GameService.class);
+
+    @Value("${algorithm.optimized-percentage:50}")
+    private int optimizedPercentage;
 
     @Autowired
     private GameRepository gameRepository;
@@ -26,7 +34,8 @@ public class GameService {
     private AlgorithmFactory algorithmFactory;
 
     public Game calculate(int[][] dungeon) {
-        AlgorithmType algorithmType = Math.random() < 0.5 ? AlgorithmType.OPTIMIZED : AlgorithmType.STANDARD;
+        AlgorithmType algorithmType = (Math.random() * 100) < optimizedPercentage ? AlgorithmType.OPTIMIZED : AlgorithmType.STANDARD;
+        logger.info("Selected algorithm: {}", algorithmType);
         AlgorithmStrategy selectedAlgorithm = algorithmFactory.getAlgorithm(algorithmType);
 
         Instant start = Instant.now();

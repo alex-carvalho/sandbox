@@ -9,7 +9,11 @@ A Java 23 Spring Boot application that solves the LeetCode Dungeon Game problem 
     mvn clean install
     ```
 
-2.  **Run the application using Docker Compose:**
+2.  **Run the application:**
+   ```bash
+    mvn clean spring-boot:run
+    ```
+    Using Docker Compose
     ```bash
     docker-compose up --build
     ```
