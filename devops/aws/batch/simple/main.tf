@@ -9,38 +9,26 @@ data "aws_subnets" "default" {
   }
 }
 
-resource "aws_security_group" "batch_sg" {
-  name        = "batch-example-sg"
-  description = "Security group for example AWS Batch"
-  vpc_id      = data.aws_vpc.default.id
-
-  tags = {
-    Name = "batch-example-sg"
+data "aws_security_group" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
   }
+
+  filter {
+    name   = "group-name"
+    values = ["default"]
+  }
+  
 }
 
-resource "aws_iam_role" "batch_service" {
-  name = "batch-service-role-example"
+data "aws_iam_role" "batch_service" {
+  name = "AWSServiceRoleForBatch"
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect    = "Allow",
-        Principal = { Service = "batch.amazonaws.com" },
-        Action    = "sts:AssumeRole"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "batch_service_attach" {
-  role       = aws_iam_role.batch_service.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole"
 }
 
 resource "aws_iam_role" "ecs_task_execution" {
-  name = "ecs-task-execution-role-batch-example"
+  name = "ecs-task-execution-role-batch-poc"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -59,47 +47,53 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_attach" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-resource "aws_iam_role_policy_attachment" "ecs_task_ecr_read" {
-  role       = aws_iam_role.ecs_task_execution.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-}
-
 
 ## aws_batch resources
 
 resource "aws_batch_compute_environment" "fargate" {
-  name         = "example-fargate-ce"
-  service_role = aws_iam_role.batch_service.arn
+  name         = "poc-fargate-ce"
+  service_role = data.aws_iam_role.batch_service.arn
   type         = "MANAGED"
 
   compute_resources {
     type               = "FARGATE"
     max_vcpus          = 4
   subnets            = data.aws_subnets.default.ids
-    security_group_ids = [aws_security_group.batch_sg.id]
+    security_group_ids = [data.aws_security_group.default.id]
   }
 }
 
 resource "aws_batch_job_queue" "queue" {
-  name     = "example-batch-queue"
+  name     = "poc-batch-queue"
   state    = "ENABLED"
-  priority = 1
+  priority = 0
 
   compute_environment_order {
-    order            = 1
+    order               = 1
     compute_environment = aws_batch_compute_environment.fargate.arn
   }
 }
 
 resource "aws_batch_job_definition" "hello" {
-  name                  = "example-hello"
+  name                  = "poc-hello"
   type                  = "container"
   platform_capabilities = ["FARGATE"]
 
   container_properties = jsonencode({
-    image            = "public.ecr.aws/docker/library/busybox:latest"
-    vcpus            = 1
-    memory           = 1024
+    image = "public.ecr.aws/amazonlinux/amazonlinux:latest"
+    networkConfiguration = {
+      assignPublicIp = "ENABLED"
+    },
+    resourceRequirements = [
+      {
+        type  = "VCPU"
+        value = "0.25"
+      },
+      {
+        type  = "MEMORY"
+        value = "512"
+      }
+    ]
     command          = ["echo", "Hello from AWS Batch (Fargate)!"]
     executionRoleArn = aws_iam_role.ecs_task_execution.arn
   })

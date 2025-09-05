@@ -11,6 +11,15 @@ Assumptions
 
 Quick start
 
+Security & static scanning
+
+```bash
+terrascan scan -t aws
+trivy config --exit-code 0 --no-progress .
+```
+
+terraform
+
 ```bash
 terraform init
 terraform validate
@@ -23,18 +32,8 @@ terraform apply
 ```bash
 aws batch submit-job \
   --region us-east-1 \
-  --job-name example-hello-job \
-  --job-queue <JOB_QUEUE_ARN_OR_NAME> \
-  --job-definition <JOB_DEFINITION_ARN_OR_NAME> \
-  --platform-capabilities FARGATE
+  --job-name poc-hello-job \
+  --job-queue arn:aws:batch:us-east-1:559167400212:job-queue/poc-batch-queue \
+  --job-definition arn:aws:batch:us-east-1:559167400212:job-definition/poc-hello:1
 ```
 
-Replace `<JOB_QUEUE_ARN_OR_NAME>` and `<JOB_DEFINITION_ARN_OR_NAME>` with the outputs from Terraform.
-
-
-Security & static scanning
-
-```bash
-terrascan scan -t aws
-trivy config --exit-code 0 --no-progress .
-```
