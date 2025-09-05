@@ -19,7 +19,7 @@ data "aws_security_group" "default" {
     name   = "group-name"
     values = ["default"]
   }
-  
+
 }
 
 data "aws_iam_role" "batch_service" {
@@ -58,7 +58,7 @@ resource "aws_batch_compute_environment" "fargate" {
   compute_resources {
     type               = "FARGATE"
     max_vcpus          = 4
-  subnets            = data.aws_subnets.default.ids
+    subnets            = data.aws_subnets.default.ids
     security_group_ids = [data.aws_security_group.default.id]
   }
 }
