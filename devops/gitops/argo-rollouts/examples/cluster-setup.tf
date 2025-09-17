@@ -12,12 +12,12 @@ resource "kind_cluster" "default" {
       ]
 
       extra_port_mappings {
-        container_port = 80
-        host_port      = 80
+        container_port = 30080
+        host_port      = 30080
       }
       extra_port_mappings {
-        container_port = 443
-        host_port      = 443
+        container_port = 30443
+        host_port      = 30443
       }
     }
   }
