@@ -1,0 +1,4 @@
+(library
+ (public_name task_manager)
+ (name task_manager)
+ (libraries yojson))

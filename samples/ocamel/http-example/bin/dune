@@ -1,0 +1,4 @@
+(executable
+ (public_name task_server)
+ (name main)
+ (libraries task_manager cohttp-lwt-unix yojson lwt))

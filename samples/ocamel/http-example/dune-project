@@ -1,0 +1,5 @@
+(lang dune 3.0)
+
+(package
+ (name task_manager)
+ (depends ocaml dune cohttp-lwt-unix yojson alcotest))
