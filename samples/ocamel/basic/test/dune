@@ -1,0 +1,4 @@
+(test
+ (public_name basic_test)
+ (name test_basic)
+ (libraries basic))
