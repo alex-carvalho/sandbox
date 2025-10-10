@@ -1,0 +1,5 @@
+(executable
+ (name main)
+ (public_name bitonic_sequence)
+ (libraries bitonic dream yojson lwt redis-lwt)
+ (preprocess (pps lwt_ppx)))
