@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  pd1:
+    image: pingcap/pd:v8.5.0
+    command: ["pd-server", "--name=pd1", "--data-dir=/pd/data", "--client-urls=http://0.0.0.0:2379", "--advertise-client-urls=http://pd1:2379", "--peer-urls=http://0.0.0.0:2380", "--advertise-peer-urls=http://pd1:2380", "--initial-cluster=pd1=http://pd1:2380,pd2=http://pd2:2380,pd3=http://pd3:2380"]
+    ports:
+      - "2379:2379"
+    volumes:
+      - pd1-data:/pd/data
+
+  pd2:
+    image: pingcap/pd:v8.5.0
+    command: ["pd-server", "--name=pd2", "--data-dir=/pd/data", "--client-urls=http://0.0.0.0:2379", "--advertise-client-urls=http://pd2:2379", "--peer-urls=http://0.0.0.0:2380", "--advertise-peer-urls=http://pd2:2380", "--initial-cluster=pd1=http://pd1:2380,pd2=http://pd2:2380,pd3=http://pd3:2380"]
+    volumes:
+      - pd2-data:/pd/data
+
+  pd3:
+    image: pingcap/pd:v8.5.0
+    command: ["pd-server", "--name=pd3", "--data-dir=/pd/data", "--client-urls=http://0.0.0.0:2379", "--advertise-client-urls=http://pd3:2379", "--peer-urls=http://0.0.0.0:2380", "--advertise-peer-urls=http://pd3:2380", "--initial-cluster=pd1=http://pd1:2380,pd2=http://pd2:2380,pd3=http://pd3:2380"]
+    volumes:
+      - pd3-data:/pd/data
+
+  tikv1:
+    image: pingcap/tikv:v8.5.0
+    depends_on:
+      - pd1
+      - pd2
+      - pd3
+    command: ["tikv-server", "--pd=pd1:2379,pd2:2379,pd3:2379", "--data-dir=/tikv/data"]
+    volumes:
+      - tikv1-data:/tikv/data
+
+  tikv2:
+    image: pingcap/tikv:v8.5.0
+    depends_on:
+      - pd1
+      - pd2
+      - pd3
+    command: ["tikv-server", "--pd=pd1:2379,pd2:2379,pd3:2379", "--data-dir=/tikv/data"]
+    volumes:
+      - tikv2-data:/tikv/data
+
+  tikv3:
+    image: pingcap/tikv:v8.5.0
+    depends_on:
+      - pd1
+      - pd2
+      - pd3
+    command: ["tikv-server", "--pd=pd1:2379,pd2:2379,pd3:2379", "--data-dir=/tikv/data"]
+    volumes:
+      - tikv3-data:/tikv/data
+
+  tidb:
+    image: pingcap/tidb:v8.5.0
+    depends_on:
+      - pd1
+      - tikv1
+    command: ["tidb-server", "--store=tikv", "--path=pd1:2379,pd2:2379,pd3:2379", "--advertise-address=tidb"]
+    ports:
+      - "4000:4000"
+      - "10080:10080"
+
+  tiflash:
+    image: pingcap/tiflash:v8.5.0
+    depends_on:
+      - pd1
+      - tikv1
+    environment:
+      - TIFLASH_SERVER_ADDR=0.0.0.0:3930
+    ports:
+      - "3930:3930"
+    volumes:
+      - tiflash-data:/tiflash/data
+
+  ticdc:
+    image: pingcap/ticdc:v8.5.0
+    depends_on:
+      - pd1
+    command: ["cdc", "server", "--pd=pd1:2379"]
+    ports:
+      - "8300:8300"
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+
+volumes:
+  pd1-data:
+  pd2-data:
+  pd3-data:
+  tikv1-data:
+  tikv2-data:
+  tikv3-data:
+  tiflash-data:

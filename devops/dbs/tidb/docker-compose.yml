@@ -1,0 +1,34 @@
+version: '3.7'
+
+services:
+  pd:
+    image: pingcap/pd:v8.5.0
+    command: ["pd-server", "--name=pd", "--data-dir=/pd/data", "--client-urls=http://0.0.0.0:2379", "--advertise-client-urls=http://pd:2379"]
+    ports:
+      - "2379:2379"
+    volumes:
+      - pd-data:/pd/data
+
+  tikv:
+    image: pingcap/tikv:v8.5.0
+    depends_on:
+      - pd
+    command: ["tikv-server", "--pd=pd:2379", "--data-dir=/tikv/data"]
+    volumes:
+      - tikv-data:/tikv/data
+    ports:
+      - "20160:20160"
+
+  tidb:
+    image: pingcap/tidb:v8.5.0
+    depends_on:
+      - pd
+      - tikv
+    command: ["tidb-server", "--store=tikv", "--path=pd:2379", "--advertise-address=tidb"]
+    ports:
+      - "4000:4000" # MySQL-compatible
+      - "10080:10080" # HTTP status port
+
+volumes:
+  pd-data:
+  tikv-data:
