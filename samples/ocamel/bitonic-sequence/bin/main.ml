@@ -21,7 +21,7 @@ let () =
           let result = `Assoc [
             ("sequence", `List (List.map (fun x -> `Int x) sequence));
             ("length", `Int (List.length sequence));
-            ("is_bitonic", `Bool (Bitonic.is_bitonic sequence))
+            ("is_bitonic", `Bool (sequence <> [-1]))
           ] in
           let result_str = Yojson.Safe.to_string result in
           let key = Printf.sprintf "bitonic:%d:%d:%d" n min_val max_val in

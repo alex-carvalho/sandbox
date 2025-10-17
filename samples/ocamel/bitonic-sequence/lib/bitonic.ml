@@ -1,43 +1,17 @@
 let generate_bitonic n min_val max_val =
-  if n <= 0 then []
-  else if n = 1 then [min_val]
+  if n > (max_val - min_val) * 2 + 1 then
+    [-1]
   else
-    let peak_pos = (n + 1) / 2 in
-    let increasing_len = peak_pos in
-    let decreasing_len = n - peak_pos in
-    
-    let range = max_val - min_val in
-    
-    let increasing = 
-      List.init increasing_len (fun i ->
-        min_val + (range * i) / (increasing_len - 1)
-      )
-    in
-    
-    let decreasing = 
-      if decreasing_len > 0 then
-        List.init decreasing_len (fun i ->
-          max_val - (range * (i + 1)) / decreasing_len
-        )
-      else []
-    in
-    
-    increasing @ decreasing
-
-let is_bitonic seq =
-  let rec find_peak i increasing =
-    if i >= List.length seq - 1 then true
-    else
-      let curr = List.nth seq i in
-      let next = List.nth seq (i + 1) in
-      if increasing then
-        if curr < next then find_peak (i + 1) true
-        else if curr = next then false
-        else find_peak (i + 1) false
-      else
-        if curr > next then find_peak (i + 1) false
-        else false
-  in
-  match seq with
-  | [] | [_] -> true
-  | _ -> find_peak 0 true
+    let front = ref [max_val - 1] in
+    let back_rev = ref [] in
+    let size () = List.length !front + List.length !back_rev in
+    (* Add decreasing part: for i = max_val downto min_val add to back (addLast) *)
+    for i = max_val downto min_val do
+      if size () < n then back_rev := i :: !back_rev
+    done;
+    (* Add increasing part: for i = max_val - 2 downto min_val add to front (addFirst) *)
+    for i = max_val - 2 downto min_val do
+      if size () < n then front := i :: !front
+    done;
+    (* concatenate front with reversed back_rev to produce deque contents *)
+    !front @ (List.rev !back_rev)
