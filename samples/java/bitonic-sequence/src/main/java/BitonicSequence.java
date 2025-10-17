@@ -27,8 +27,7 @@ public class BitonicSequence {
     
 
     public static void main(String[] args) {
-        // Generate bitonic sequence of length 8 from range [1, 20]
-        List<Integer> sequence = generate(8, 1, 20);
+        List<Integer> sequence = generate(3, 1, 10);
         System.out.println("Bitonic sequence: " + sequence);
         
         // Generate another example
