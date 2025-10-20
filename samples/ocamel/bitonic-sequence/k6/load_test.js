@@ -37,6 +37,4 @@ export default function () {
     'has sequence': (r) => JSON.parse(r.body).sequence !== undefined,
     'is bitonic': (r) => JSON.parse(r.body).is_bitonic === true,
   });
-
-  sleep(1);
 }
