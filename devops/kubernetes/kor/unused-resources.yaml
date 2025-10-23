@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: unused-config
+  namespace: default
+data:
+  unused_key: "unused_value"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: unused-secret
+  namespace: default
+type: Opaque
+data:
+  unused_token: dW51c2VkX3Rva2Vu
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: unused-service
+  namespace: default
+spec:
+  selector:
+    app: nonexistent-app
+  ports:
+  - port: 80
+    targetPort: 8080
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: unused-pvc
+  namespace: default
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: unused-serviceaccount
+  namespace: default
