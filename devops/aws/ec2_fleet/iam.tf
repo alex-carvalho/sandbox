@@ -51,6 +51,13 @@ resource "aws_iam_role_policy" "jenkins_ec2_fleet" {
           "ec2:ModifySpotFleetRequest"
         ]
         Resource = "*"
+      },
+
+      {
+        Sid      = "AllowPassRole",
+        Effect   = "Allow",
+        Action   = "iam:PassRole",
+        Resource = aws_iam_role.jenkins_agent.arn
       }
     ]
   })

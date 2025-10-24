@@ -59,10 +59,10 @@ resource "aws_security_group" "jenkins_controller" {
   }
 
   ingress {
-    from_port       = 50000
-    to_port         = 50000
-    protocol        = "tcp"
-    security_groups = [aws_security_group.jenkins_agent.id]
+    from_port   = 50000
+    to_port     = 50000
+    protocol    = "tcp"
+    cidr_blocks = ["172.31.0.0/16"]
   }
 
   egress {
