@@ -114,3 +114,33 @@ resource "aws_security_group" "jenkins_agent" {
     Name = "jenkins-agent-sg"
   }
 }
+
+resource "aws_autoscaling_group" "jenkins_agents_asg" {
+  name                      = "jenkins-agents-asg"
+  max_size                  = "5"
+  min_size                  = "0"
+  desired_capacity          = "0"
+  vpc_zone_identifier       = [
+    data.aws_subnet.selected[0].id,
+    data.aws_subnet.selected[1].id,
+    data.aws_subnet.selected[2].id,
+  ]
+
+  launch_template {
+    id      = aws_launch_template.jenkins_agent.id
+    version = aws_launch_template.jenkins_agent.latest_version
+  }
+
+  health_check_type         = "EC2"
+  health_check_grace_period = 300
+
+  tag {
+    key                 = "Name"
+    value               = "jenkins-agent"
+    propagate_at_launch = true
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}

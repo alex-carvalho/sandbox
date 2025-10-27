@@ -44,7 +44,10 @@ resource "aws_iam_role_policy" "jenkins_ec2_fleet" {
           "ec2:DescribeSecurityGroups",
           "ec2:DescribeLaunchTemplates",
           "ec2:DescribeLaunchTemplateVersions",
+          
           "autoscaling:DescribeAutoScalingGroups",
+          "autoscaling:TerminateInstanceInAutoScalingGroup",
+          "autoscaling:UpdateAutoScalingGroup",
 
           "ec2:DescribeSpotFleetRequests",
           "ec2:DescribeSpotFleetInstances",
