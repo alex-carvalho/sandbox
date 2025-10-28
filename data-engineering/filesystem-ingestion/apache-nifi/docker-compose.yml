@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    ports:
+      # Port for your host machine (NiFi, Kafka-UI, etc. will use 9092)
+      - "9094:9094"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - kafka-net
+    environment:
+      # --- KRaft Configuration (Confluent Syntax) ---
+      CLUSTER_ID: Zg2X3j-uR-C2-b-dKk-8-A
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+
+      # --- Listeners Configuration (Confluent Syntax) ---
+      KAFKA_LISTENERS: 'INTERNAL://:9092,EXTERNAL://:9094,CONTROLLER://:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://kafka:9092,EXTERNAL://localhost:9094'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL'
+      
+      # --- Single-Node Settings (Defaults are 3) ---
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+  nifi:
+    image: apache/nifi:latest
+    container_name: nifi
+    ports:
+      # NiFi Web UI port
+      - "8443:8443"
+    volumes:
+      # --- NiFi Internal State (for persistence) ---
+      - nifi_conf:/opt/nifi/nifi-current/conf
+      - nifi_database:/opt/nifi/nifi-current/database_repository
+      - nifi_flowfile:/opt/nifi/nifi-current/flowfile_repository
+      - nifi_content:/opt/nifi/nifi-current/content_repository
+      - nifi_provenance:/opt/nifi/nifi-current/provenance_repository
+      
+      # --- Volume for File Ingestion ---
+      # Maps a local folder './my-data' to '/data/input' inside the NiFi container
+      - ./my-data:/data/input
+    networks:
+      - kafka-net
+    depends_on:
+      - kafka
+    environment:
+      # --- Run NiFi on HTTP (easier for local dev) ---
+      # - NIFI_WEB_HTTP_PORT=8080
+      # - NIFI_WEB_HTTPS_PORT=
+      # - NIFI_WEB_HTTPS_ENABLED=false
+      # - NIFI_WEB_PROXY_HOST=localhost
+      
+      # --- Set a key for encrypting sensitive properties ---
+      - NIFI_SENSITIVE_PROPS_KEY=a-secret-key-for-nifi
+
+      # --- Automation Variables for your NiFi Flow ---
+      - NIFI_INPUT_DIRECTORY=/data/input
+      - NIFI_KAFKA_TOPIC=my-iot-topic
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      # NiFi is using 8080, so this UI will be on 8090
+      - "8090:8080"
+    networks:
+      - kafka-net
+    depends_on:
+      - kafka
+    environment:
+      # Tells the UI how to find the Kafka broker
+      KAFKA_CLUSTERS_0_NAME: local-kafka
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+
+volumes:
+  kafka_data: {}
+  nifi_conf: {}
+  nifi_database: {}
+  nifi_flowfile: {}
+  nifi_content: {}
+  nifi_provenance: {}
+
+networks:
+  kafka-net:
+    driver: bridge
