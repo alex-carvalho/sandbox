@@ -11,6 +11,11 @@ services:
       - kafka_data:/var/lib/kafka/data
     networks:
       - kafka-net
+    healthcheck:
+      test: kafka-broker-api-versions --bootstrap-server localhost:9092
+      interval: 10s
+      timeout: 5s
+      retries: 10
     environment:
       # --- KRaft Configuration (Confluent Syntax) ---
       CLUSTER_ID: Zg2X3j-uR-C2-b-dKk-8-A
@@ -50,20 +55,12 @@ services:
     networks:
       - kafka-net
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     environment:
-      # --- Run NiFi on HTTP (easier for local dev) ---
-      # - NIFI_WEB_HTTP_PORT=8080
-      # - NIFI_WEB_HTTPS_PORT=
-      # - NIFI_WEB_HTTPS_ENABLED=false
-      # - NIFI_WEB_PROXY_HOST=localhost
-      
-      # --- Set a key for encrypting sensitive properties ---
       - NIFI_SENSITIVE_PROPS_KEY=a-secret-key-for-nifi
-
-      # --- Automation Variables for your NiFi Flow ---
-      - NIFI_INPUT_DIRECTORY=/data/input
-      - NIFI_KAFKA_TOPIC=my-iot-topic
+      - SINGLE_USER_CREDENTIALS_USERNAME=admin
+      - SINGLE_USER_CREDENTIALS_PASSWORD=admin1234567
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
