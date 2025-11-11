@@ -31,7 +31,7 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
     testImplementation "org.testcontainers:testcontainers:$testcontainersVersion"
-    testImplementation "org.testcontainers:kafka:$testcontainersVersion"
+    testImplementation "org.testcontainers:kafka:1.21.3"
     testImplementation "org.apache.kafka:kafka-clients:$kafkaClientsVersion"
 }
 

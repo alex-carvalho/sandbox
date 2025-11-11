@@ -16,6 +16,8 @@ import java.util.function.Consumer;
 public class KafkaConsumerService {
     private static final Logger logger = LoggerFactory.getLogger(KafkaConsumerService.class);
 
+
+
     private final KafkaConsumer<String, String> consumer;
 
     public KafkaConsumerService() {
