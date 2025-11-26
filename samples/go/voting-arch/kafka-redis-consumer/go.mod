@@ -3,7 +3,7 @@ module github.com/alex-carvalho/kafka-redis-consumer
 go 1.25
 
 require (
-	github.com/redis/go-redis/v9 v9.5.1
+	github.com/redis/go-redis/v9 v9.5.5
 	github.com/segmentio/kafka-go v0.4.47
 	github.com/sirupsen/logrus v1.9.3
 )
