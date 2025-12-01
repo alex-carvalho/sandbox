@@ -2,10 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/alex-carvalho/voting-api/internal/kafka"
@@ -34,9 +35,11 @@ func (h *VoteHandler) Handle(c *gin.Context) {
 	}
 
 	message := map[string]interface{}{
+		"id":          uuid.New().String(), // Unique message ID for idempotence
 		"user_id":     req.UserID,
 		"voting_id":   req.VotingID,
 		"vote_option": req.VoteOption,
+		"timestamp":   time.Now().Unix(), // Timestamp for ordering
 	}
 
 	messageBytes, err := json.Marshal(message)
@@ -46,7 +49,7 @@ func (h *VoteHandler) Handle(c *gin.Context) {
 		return
 	}
 
-	err = h.producer.SendMessage(fmt.Sprintf("votes-%d", req.VotingID), messageBytes)
+	err = h.producer.SendMessage("votes", messageBytes)
 	if err != nil {
 		h.logger.Errorf("Failed to send vote to Kafka: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store vote"})
