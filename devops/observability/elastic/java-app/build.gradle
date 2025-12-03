@@ -1,0 +1,65 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.0'
+    id 'io.spring.dependency-management' version '1.1.4'
+}
+
+group = 'com.elastic.test'
+version = '1.0.0'
+def appName = 'elastic-stack-demo'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-logging'
+
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+
+    implementation 'io.micrometer:micrometer-core'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+
+    implementation 'co.elastic.apm:apm-agent-api:1.55.1'
+    runtimeOnly 'co.elastic.apm:elastic-apm-agent:1.55.1'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.register('downloadApmAgent') {
+    doLast {
+        def apmAgentVersion = '1.55.1'
+        def apmAgentDep = configurations.runtimeClasspath.find {
+            it.name.contains('elastic-apm-agent') && it.name.endsWith('.jar')
+        }
+        
+        if (apmAgentDep) {
+            def outputFile = file("build/elastic-apm-agent-${apmAgentVersion}.jar")
+            outputFile.parentFile.mkdirs()
+            copy {
+                from apmAgentDep
+                into outputFile.parentFile
+                rename { String fileName ->
+                    "elastic-apm-agent-${apmAgentVersion}.jar"
+                }
+            }
+            println "Copied APM agent to ${outputFile.absolutePath}"
+        } else {
+            println "APM agent not found in runtime classpath"
+        }
+    }
+}
+
+tasks.named('bootJar').configure {
+    dependsOn 'downloadApmAgent'
+    archiveBaseName = appName
+    archiveFileName = "${appName}.jar"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+    withSourcesJar()
+}

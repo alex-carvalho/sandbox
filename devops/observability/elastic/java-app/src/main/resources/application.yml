@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: elastic-stack-demo
+  jmx:
+    enabled: true
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 50ms,100ms,200ms,500ms,1s
+    export:
+      prometheus:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.elastic.test: DEBUG
+  pattern:
+    console: "%d{ISO8601} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/app.log
+    max-size: 10MB
+    max-history: 10
+
+elastic:
+  apm:
+    enabled: true
+    service-name: elastic-stack-demo
+    server-urls: http://apm-server:8200
+    environment: testing
+    transaction-sample-rate: 1.0
+    log-correlation: true
+    trace-methods: "com.elastic.test.*"
