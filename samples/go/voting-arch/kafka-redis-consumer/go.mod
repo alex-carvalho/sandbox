@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/confluentinc/confluent-kafka-go/v2 v2.12.0
-	github.com/redis/go-redis/v9 v9.5.1
+	github.com/redis/go-redis/v9 v9.5.5
 	github.com/sirupsen/logrus v1.9.3
 )
 
