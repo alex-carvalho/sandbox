@@ -18,4 +18,8 @@ cd java-app
 docker build -t java-app:latest .
 kind load docker-image java-app:latest --name elastic-ki
 kubectl apply -f deployment.yaml
+
+
+kubectl run curl-test -n elastic --image=curlimages/curl --rm -it --restart=Never -- sh -c 'for i in $(seq 1 10); do curl -s http://java-app:8080/api/hello; done'
+
 ```

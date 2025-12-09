@@ -45,12 +45,18 @@ spec:
             - containerPort: 8080
               name: http
           env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
             - name: ELASTIC_APM_SERVER_URLS
               value: "http://apm.elastic.svc:8200"
             - name: ELASTIC_APM_SERVICE_NAME
               value: "elastic-stack-demo"
             - name: ELASTIC_APM_ENVIRONMENT
               value: "kubernetes"
+            - name: ELASTIC_APM_CENTRAL_CONFIG
+              value: "true"
+            - name: ELASTIC_APM_LOG_SENDING
+              value: "true"
             - name: ELASTIC_APM_SECRET_TOKEN
               valueFrom:
                 secretKeyRef:

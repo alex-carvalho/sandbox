@@ -23,6 +23,8 @@ spec:
         version: latest
       - name: apm
         version: latest
+      - name: kubernetes
+        version: latest
     xpack.fleet.agentPolicies:
       - name: Fleet Server on ECK policy
         id: eck-fleet-server
@@ -58,3 +60,24 @@ spec:
                 vars:
                   - name: host
                     value: "0.0.0.0:8200"
+          - name: kubernetes-1
+            id: kubernetes-1
+            package:
+              name: kubernetes
+            inputs:
+              - type: filestream
+                enabled: true
+                streams:
+                  - data_stream:
+                      dataset: kubernetes.container_logs
+                    enabled: true
+                    vars:
+                      - name: paths
+                        value:
+                          - /var/log/containers/*${kubernetes.container.id}.log
+                      - name: symlinks
+                        value: true
+                      - name: parsers
+                        value:
+                          - ndjson:
+                              target: ""
