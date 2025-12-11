@@ -3,6 +3,13 @@ resource "kind_cluster" "default" {
   name = "elastic-kind-cluster"
 }
 
+
+resource "kubernetes_namespace" "apps" {
+  metadata {
+    name = "apps"
+  }
+}
+
 resource "helm_release" "eck" {
   name             = "eck-operator"
   repository       = "https://helm.elastic.co"
@@ -40,7 +47,10 @@ resource "kubernetes_manifest" "es_cr" {
     spec = yamldecode(file("${path.module}/k8s/elasticsearch.yaml")).spec
   }
   
-  depends_on = [kubernetes_namespace.elastic]
+  depends_on = [
+    kubernetes_namespace.elastic,
+    helm_release.eck
+  ]
 }
 
 # Kibana
@@ -186,4 +196,32 @@ resource "kubernetes_manifest" "elastic_agent" {
     kubernetes_service_account.elastic_agent,
     kubernetes_cluster_role_binding.elastic_agent
   ]
+}
+
+# APM Service to expose elastic-agent APM server
+resource "kubernetes_service" "apm" {
+  metadata {
+    name      = "apm"
+    namespace = kubernetes_namespace.elastic.metadata[0].name
+    labels = {
+      app = "elastic-agent"
+    }
+  }
+
+  spec {
+    selector = {
+      "agent.k8s.elastic.co/name" = "elastic-agent"
+    }
+
+    port {
+      port        = 8200
+      target_port = 8200
+      protocol    = "TCP"
+      name        = "apm"
+    }
+
+    type = "ClusterIP"
+  }
+
+  depends_on = [kubernetes_manifest.elastic_agent]
 }

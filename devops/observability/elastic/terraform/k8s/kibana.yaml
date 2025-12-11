@@ -77,7 +77,3 @@ spec:
                           - /var/log/containers/*${kubernetes.container.id}.log
                       - name: symlinks
                         value: true
-                      - name: parsers
-                        value:
-                          - ndjson:
-                              target: ""
