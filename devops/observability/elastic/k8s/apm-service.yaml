@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: apm
+  namespace: elastic
+  labels:
+    app: elastic-agent
+spec:
+  selector:
+    agent.k8s.elastic.co/name: elastic-agent
+  ports:
+    - port: 8200
+      targetPort: 8200
+      protocol: TCP
+      name: apm
+  type: ClusterIP

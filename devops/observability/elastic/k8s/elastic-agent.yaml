@@ -2,8 +2,9 @@ apiVersion: agent.k8s.elastic.co/v1alpha1
 kind: Agent
 metadata:
   name: elastic-agent
+  namespace: elastic
 spec:
-  version: "8.11.0"
+  version: 9.2.0
   kibanaRef:
     name: kibana-sample
   fleetServerRef:
@@ -21,10 +22,10 @@ spec:
           - name: agent
             resources:
               limits:
-                memory: 512Mi
+                memory: 4Gi
               requests:
-                cpu: 100m
-                memory: 256Mi
+                cpu: 1000m
+                memory: 2Gi
             volumeMounts:
               - name: varlog
                 mountPath: /var/log

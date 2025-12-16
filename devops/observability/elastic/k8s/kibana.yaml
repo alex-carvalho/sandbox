@@ -2,8 +2,9 @@ apiVersion: kibana.k8s.elastic.co/v1
 kind: Kibana
 metadata:
   name: kibana-sample
+  namespace: elastic
 spec:
-  version: "8.11.0"
+  version: 9.2.0
   count: 1
   elasticsearchRef:
     name: elasticsearch-sample
@@ -66,14 +67,15 @@ spec:
               name: kubernetes
             inputs:
               - type: filestream
-                enabled: true
+                enabled: false
                 streams:
                   - data_stream:
                       dataset: kubernetes.container_logs
-                    enabled: true
+                    enabled: false
                     vars:
                       - name: paths
                         value:
-                          - /var/log/containers/*${kubernetes.container.id}.log
+                          - /var/log/containers/*_apps_*.log
+                          - /var/log/containers/*_elastic_*.log
                       - name: symlinks
                         value: true

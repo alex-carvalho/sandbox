@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <!-- Plain text console for local development -->
-    <springProfile name="local,default">
+    <springProfile name="local">
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
                 <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger{36}) - %msg%n</pattern>
@@ -17,8 +16,7 @@
         <logger name="org.springframework.boot" level="INFO"/>
     </springProfile>
 
-    <!-- JSON console for Kubernetes/Docker -->
-    <springProfile name="docker,kubernetes,prod">
+    <springProfile name="default">
         <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
             <encoder class="net.logstash.logback.encoder.LogstashEncoder">
                 <timeZone>UTC</timeZone>
@@ -33,7 +31,5 @@
         </root>
 
         <logger name="com.elastic.test" level="DEBUG"/>
-        <logger name="org.springframework.web" level="INFO"/>
-        <logger name="org.springframework.boot" level="INFO"/>
     </springProfile>
 </configuration>
