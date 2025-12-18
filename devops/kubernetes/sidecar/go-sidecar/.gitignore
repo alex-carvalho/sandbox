@@ -1,0 +1,22 @@
+*.o
+*.a
+*.so
+.DS_Store
+.env
+.env.local
+bin/
+dist/
+*.out
+*.html
+vendor/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build
+/sidecar
+.github/
