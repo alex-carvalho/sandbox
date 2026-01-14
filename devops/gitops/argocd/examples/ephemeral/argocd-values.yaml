@@ -1,0 +1,7 @@
+controller:
+  extraArgs:
+    - --application-namespaces=argocd,ephemeral-apps
+
+server:
+  extraArgs:
+    - --application-namespaces=argocd,ephemeral-apps

@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: ephemeral
+  namespace: argocd
+spec:
+  sourceRepos:
+  - "*"
+
+  destinations:
+  - namespace: ephemeral-apps
+    server: https://kubernetes.default.svc
+
+  sourceNamespaces:
+  - ephemeral-apps
+
+  clusterResourceWhitelist:
+  - group: "*"
+    kind: "*"
+  namespaceResourceWhitelist:
+  - group: "*"
+    kind: "*"

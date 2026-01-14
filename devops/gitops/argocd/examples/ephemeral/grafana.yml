@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana-preview
+  namespace: ephemeral-apps
+spec:
+  project: ephemeral
+
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: grafana
+    targetRevision: 7.3.9
+    helm:
+      values: |
+        adminUser: admin
+        adminPassword: admin
+        service:
+          type: ClusterIP
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ephemeral-apps
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
