@@ -1,0 +1,11 @@
+app:
+  name: grafana
+  namespace: monitoring
+  helmRepo: https://grafana.github.io/helm-charts
+  chart: grafana
+  version: 8.8.2
+  values: |
+    adminPassword: admin
+    service:
+      type: ClusterIP
+      port: 80

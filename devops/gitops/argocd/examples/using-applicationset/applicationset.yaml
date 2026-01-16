@@ -16,9 +16,12 @@ spec:
     spec:
       project: default
       source:
-        repoURL: '{{app.repoURL}}'
-        targetRevision: '{{app.targetRevision}}'
-        path: '{{app.path}}'
+        repoURL: '{{app.helmRepo}}'
+        chart: '{{app.chart}}'
+        targetRevision: '{{app.version}}'
+        helm:
+          releaseName: '{{app.name}}'
+          values: '{{app.values}}'
       destination:
         server: https://kubernetes.default.svc
         namespace: '{{app.namespace}}'
