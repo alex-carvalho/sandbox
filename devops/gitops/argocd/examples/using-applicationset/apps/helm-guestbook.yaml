@@ -1,0 +1,6 @@
+app:
+  name: helm-guestbook
+  namespace: apps
+  repoURL: https://github.com/argoproj/argocd-example-apps.git
+  targetRevision: HEAD
+  path: helm-guestbook
