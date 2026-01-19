@@ -17,11 +17,11 @@ VERSION=$(curl --silent "https://api.github.com/repos/argoproj/argo-cd/releases/
 sudo curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/download/$VERSION/argocd-linux-amd64
 sudo chmod +x /usr/local/bin/argocd
 
-# foward the server api
-k port-forward svc/argocd-server -n argocd 8080:443
-
 # retrive initial admin argocd password
 argocd admin initial-password -n argocd
+
+# foward the server api
+k port-forward svc/argocd-server -n argocd 8080:443
 
 # update account password
 argocd account update-password
