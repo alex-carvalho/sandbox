@@ -1,0 +1,6 @@
+replicaCount: 2
+
+image:
+  repository: flask-app
+  tag: latest
+  pullPolicy: IfNotPresent
