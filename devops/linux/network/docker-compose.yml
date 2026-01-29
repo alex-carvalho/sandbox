@@ -1,0 +1,56 @@
+services:
+  serviceA:
+    image: alpine:latest
+    container_name: serviceA
+    cap_add:
+      - NET_ADMIN
+    networks:
+      netA:
+        ipv4_address: 10.0.0.2
+    command: sh -c "echo 'ServiceA running on network_a' && tail -f /dev/null"
+    environment:
+      - SERVICE_NAME=serviceA
+      - NETWORK=netA
+
+  serviceB:
+    image: alpine:latest
+    container_name: serviceB
+    cap_add:
+      - NET_ADMIN
+    networks:
+      netB:
+        ipv4_address: 10.1.0.2
+    command: sh -c "echo 'ServiceB running on network_b' && tail -f /dev/null"
+    environment:
+      - SERVICE_NAME=serviceB
+      - NETWORK=netB
+
+  gateway:
+    image: alpine:latest
+    container_name: gateway
+    networks:
+      netA:
+        ipv4_address: 10.0.0.3
+      netB:
+        ipv4_address: 10.1.0.3
+    command: sh -c "echo 'Gateway running - bridging netA and netB' && tail -f /dev/null"
+    environment:
+      - SERVICE_NAME=gateway
+      - NETWORKS=netA,netB
+    depends_on:
+      - serviceA
+      - serviceB
+
+networks:
+  netA:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.0.0/24
+
+  netB:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.1.0.0/24
+
