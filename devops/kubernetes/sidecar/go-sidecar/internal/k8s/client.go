@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -10,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 type Client struct {
@@ -20,9 +22,23 @@ type Client struct {
 }
 
 func NewClient(namespace, configMapName string, logger *zap.Logger) (*Client, error) {
-	config, err := rest.InClusterConfig()
+	var config *rest.Config
+	var err error
+
+	config, err = rest.InClusterConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create in-cluster config: %w", err)
+		kubeconfig := os.Getenv("KUBECONFIG")
+		if kubeconfig == "" {
+			home, err := os.UserHomeDir()
+			if err == nil {
+				kubeconfig = home + "/.kube/config"
+			}
+		}
+
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load kubeconfig: %w", err)
+		}
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)

@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: configmap-printer
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: configmap-printer
+  template:
+    metadata:
+      labels:
+        app: configmap-printer
+    spec:
+      serviceAccountName: configmap-reader
+      containers:
+      - name: configmap-printer
+        image: configmap-printer:latest
+        imagePullPolicy: Never
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: CONFIGMAP_NAME
+          value: properties
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: configmap-reader
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: configmap-reader
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: configmap-reader
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: configmap-reader
+subjects:
+- kind: ServiceAccount
+  name: configmap-reader
+  namespace: default

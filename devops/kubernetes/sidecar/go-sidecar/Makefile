@@ -12,6 +12,7 @@ test:
 # Run local test (connects to real K8s cluster using kubeconfig)
 local-test:
 	PROPERTIES_FILE=/tmp/application.properties POD_NAMESPACE=default CONFIGMAP_NAME=properties go run ./cmd/local-test
+	kubectl get configmap properties -n default -o yaml
 
 # Run the application locally (requires Kubernetes cluster)
 run: build
