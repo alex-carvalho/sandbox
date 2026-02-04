@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"go.uber.org/zap"
@@ -20,7 +19,6 @@ type Watcher struct {
 	fsWatcher *fsnotify.Watcher
 	k8sClient *k8s.Client
 	logger    *zap.Logger
-	ticker    *time.Ticker
 }
 
 func NewWatcher(watchDir string, k8sClient *k8s.Client, logger *zap.Logger) (*Watcher, error) {
@@ -34,7 +32,6 @@ func NewWatcher(watchDir string, k8sClient *k8s.Client, logger *zap.Logger) (*Wa
 		fsWatcher: fsWatcher,
 		k8sClient: k8sClient,
 		logger:    logger,
-		ticker:    time.NewTicker(30 * time.Second),
 	}
 
 	if err := fsWatcher.Add(watchDir); err != nil {
@@ -82,7 +79,6 @@ func (w *Watcher) Watch(ctx context.Context) error {
 					zap.String("op", event.Op.String()),
 				)
 
-				time.Sleep(500 * time.Millisecond)
 				if err := w.syncProperties(ctx); err != nil {
 					w.logger.Error("sync failed", zap.Error(err))
 				}
@@ -93,11 +89,6 @@ func (w *Watcher) Watch(ctx context.Context) error {
 				return fmt.Errorf("watcher errors channel closed")
 			}
 			w.logger.Error("watcher error", zap.Error(err))
-
-		case <-w.ticker.C:
-			if err := w.syncProperties(ctx); err != nil {
-				w.logger.Error("periodic sync failed", zap.Error(err))
-			}
 		}
 	}
 }
@@ -151,7 +142,6 @@ func (w *Watcher) syncProperties(ctx context.Context) error {
 }
 
 func (w *Watcher) Close() error {
-	w.ticker.Stop()
 	return w.fsWatcher.Close()
 }
 

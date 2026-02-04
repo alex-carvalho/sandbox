@@ -78,25 +78,6 @@ key2=value2
 		})
 	}
 }
-
-func TestMerge(t *testing.T) {
-	map1 := map[string]string{"key1": "value1", "key2": "value2"}
-	map2 := map[string]string{"key2": "overridden", "key3": "value3"}
-	map3 := map[string]string{"key1": "new_value1"}
-
-	result := Merge(map1, map2, map3)
-
-	expected := map[string]string{
-		"key1": "new_value1",
-		"key2": "overridden",
-		"key3": "value3",
-	}
-
-	if !mapsEqual(result, expected) {
-		t.Errorf("Merge() = %v, want %v", result, expected)
-	}
-}
-
 func mapsEqual(a, b map[string]string) bool {
 	if len(a) != len(b) {
 		return false

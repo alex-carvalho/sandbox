@@ -42,16 +42,3 @@ func Parse(r io.Reader) (map[string]string, error) {
 
 	return props, nil
 }
-
-// Merge combines multiple property maps into one (later maps override earlier ones)
-func Merge(maps ...map[string]string) map[string]string {
-	result := make(map[string]string)
-
-	for _, m := range maps {
-		for k, v := range m {
-			result[k] = v
-		}
-	}
-
-	return result
-}
