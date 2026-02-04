@@ -74,11 +74,14 @@ spec:
           cache.ttl=3600
           cache.maxsize=1000
           EOF
+          chmod 666 /etc/config/application.properties
+          chmod 777 /etc/config
         volumeMounts:
         - name: config-volume
           mountPath: /etc/config
 
       containers:
+      # principal app that only prints the configmap contents
       - name: configmap-printer
         image: configmap-printer:latest
         imagePullPolicy: Never

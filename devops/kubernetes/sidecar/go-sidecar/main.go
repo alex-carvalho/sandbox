@@ -9,7 +9,7 @@ import (
 
 	"github.com/example/go-sidecar/internal/config"
 	"github.com/example/go-sidecar/internal/k8s"
-	"github.com/example/go-sidecar/internal/properties"
+	"github.com/example/go-sidecar/internal/watcher"
 )
 
 func main() {
@@ -27,6 +27,7 @@ func main() {
 
 	logger.Info("starting sidecar",
 		zap.String("properties_file", cfg.PropertiesFile),
+		zap.String("watch_dir", cfg.WatchDir),
 		zap.String("namespace", cfg.Namespace),
 		zap.String("configmap_name", cfg.ConfigMapName),
 	)
@@ -36,31 +37,15 @@ func main() {
 		logger.Fatal("failed to create kubernetes client", zap.Error(err))
 	}
 
-	props, err := readPropertiesFile(cfg.PropertiesFile, logger)
+	w, err := watcher.NewWatcher(cfg.WatchDir, k8sClient, logger)
 	if err != nil {
-		logger.Fatal("failed to read properties file", zap.Error(err))
+		logger.Fatal("failed to create watcher", zap.Error(err))
 	}
+	defer w.Close()
 
+	logger.Info("sidecar watcher started, watching for changes")
 	ctx := context.Background()
-	if err := k8sClient.UpdateConfigMap(ctx, props); err != nil {
-		logger.Fatal("failed to update ConfigMap", zap.Error(err))
+	if err := w.Watch(ctx); err != nil {
+		logger.Fatal("watch error", zap.Error(err))
 	}
-
-	logger.Info("sidecar completed successfully, exiting")
-}
-
-func readPropertiesFile(filePath string, logger *zap.Logger) (map[string]string, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open properties file: %w", err)
-	}
-	defer file.Close()
-
-	props, err := properties.Parse(file)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse properties file: %w", err)
-	}
-
-	logger.Info("loaded properties", zap.String("file", filePath), zap.Int("total", len(props)))
-	return props, nil
 }

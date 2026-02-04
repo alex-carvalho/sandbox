@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	PropertiesFile string
+	WatchDir       string
 	Namespace      string
 	ConfigMapName  string
 }
@@ -15,6 +16,7 @@ type Config struct {
 func LoadFromEnv() (*Config, error) {
 	cfg := &Config{
 		PropertiesFile: getEnvOrDefault("PROPERTIES_FILE", "/etc/config/application.properties"),
+		WatchDir:       getEnvOrDefault("WATCH_DIR", "/etc/config"),
 		Namespace:      getNamespace(),
 		ConfigMapName:  getEnvOrDefault("CONFIGMAP_NAME", "properties"),
 	}

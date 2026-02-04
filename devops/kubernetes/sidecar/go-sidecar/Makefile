@@ -36,6 +36,13 @@ deps:
 	go mod download
 	go mod tidy
 
+deploy: kind-load
+	kubectl delete -f k8s-deployment.yaml --ignore-not-found
+	kubectl apply -f k8s-deployment.yaml
+
+kind-load: docker-build
+	kind load docker-image go-sidecar:latest
+
 # Show help
 help:
 	@echo "Available targets:"
@@ -47,3 +54,4 @@ help:
 	@echo "  make docker-build  - Build Docker image"
 	@echo "  make lint          - Run linters"
 	@echo "  make deps          - Download and tidy dependencies"
+	@echo "  make deploy        - Deploy to Kubernetes cluster"
