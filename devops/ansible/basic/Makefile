@@ -4,6 +4,7 @@ check: run
 	@curl -s -o /dev/null -w "Status: %{http_code}\n" http://localhost:8086
 	@echo "Testing node2 (http://localhost:8087)..."
 	@curl -s -o /dev/null -w "Status: %{http_code}\n" http://localhost:8087
+	$(MAKE) clean
 
 run: setup
 	@echo "Running Ansible playbook..."
