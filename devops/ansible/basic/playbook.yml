@@ -7,6 +7,39 @@
         state: present
         update_cache: yes
 
+    - name: create web directory
+      file:
+        path: /var/www/html
+        state: directory
+        mode: '0755'
+
+    - name: create index.html
+      copy:
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head><title>Nginx OK</title></head>
+          <body><h1>✓ Nginx is running!</h1></body>
+          </html>
+        dest: /var/www/html/index.html
+        mode: '0644'
+
+    - name: configure nginx default site
+      copy:
+        content: |
+          server {
+              listen 80 default_server;
+              listen [::]:80 default_server;
+              
+              root /var/www/html;
+              index index.html;
+              
+              location / {
+                  try_files $uri $uri/ =404;
+              }
+          }
+        dest: /etc/nginx/http.d/default.conf
+
     # this iamge do not have a init system, start nginx manually
     - name: start nginx
       shell: |

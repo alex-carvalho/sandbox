@@ -1,8 +1,9 @@
 check: run
 	@echo "=== Checking nginx installation ==="
-	curl http://localhost:8086
-	curl http://localhost:8087
-	$(MAKE) clean
+	@echo "Testing node1 (http://localhost:8086)..."
+	@curl -s -o /dev/null -w "Status: %{http_code}\n" http://localhost:8086
+	@echo "Testing node2 (http://localhost:8087)..."
+	@curl -s -o /dev/null -w "Status: %{http_code}\n" http://localhost:8087
 
 run: setup
 	@echo "Running Ansible playbook..."
