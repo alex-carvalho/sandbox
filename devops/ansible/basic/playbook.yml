@@ -1,0 +1,14 @@
+- hosts: lab
+  become: yes
+  tasks:
+    - name: instalar nginx
+      apk:
+        name: nginx
+        state: present
+        update_cache: yes
+
+    # this iamge do not have a init system, start nginx manually
+    - name: start nginx
+      shell: |
+        nohup nginx > /dev/null 2>&1 &
+        sleep 1
