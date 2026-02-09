@@ -1,0 +1,123 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: python-sidecar
+  namespace: default
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: python-sidecar
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames: ["properties"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: python-sidecar
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: python-sidecar
+subjects:
+- kind: ServiceAccount
+  name: python-sidecar
+  namespace: default
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-with-python-sidecar
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: python-app
+  template:
+    metadata:
+      labels:
+        app: python-app
+    spec:
+      serviceAccountName: python-sidecar
+      
+      volumes:
+      - name: config-volume
+        emptyDir: {}
+
+      initContainers:
+      - name: init-config
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          mkdir -p /etc/config
+          cat > /etc/config/application.properties << 'EOF'
+          app.name=MyApp
+          app.version=1.0.0
+          db.host=localhost
+          db.port=5432
+          db.name=testdb
+          cache.ttl=3600
+          cache.maxsize=1000
+          EOF
+          chmod 666 /etc/config/application.properties
+          chmod 777 /etc/config
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/config
+
+      containers:
+      - name: configmap-printer
+        image: configmap-printer:latest
+        imagePullPolicy: Never
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: CONFIGMAP_NAME
+          value: properties
+
+      - name: python-sidecar
+        image: python-sidecar:latest
+        imagePullPolicy: Never
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: CONFIGMAP_NAME
+          value: properties
+        - name: WATCH_DIR
+          value: /etc/config
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/config
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: properties
+  namespace: default
+data: {}
