@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ node_name }}</title>
+    <style>
+        body {
+            background-color: {{ page_bg_color }};
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            text-align: center;
+            background-color: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            margin: 0;
+        }
+        p {
+            color: #666;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ node_name }}</h1>
+        <p>Background Color: <strong>{{ page_bg_color }}</strong></p>
+        <p>Hostname: <strong>{{ ansible_hostname }}</strong></p>
+    </div>
+</body>
+</html>

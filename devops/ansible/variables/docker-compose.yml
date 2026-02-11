@@ -1,0 +1,50 @@
+services:
+  ansible-master:
+    image: ansible-master-image
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ansible-master
+    hostname: ansible-master
+    volumes:
+      - ./playbooks:/etc/ansible/playbooks
+      - ./inventory:/etc/ansible/inventory
+      - ./host_vars:/etc/ansible/host_vars
+      - ./roles:/etc/ansible/roles
+      - ./assets:/etc/ansible/assets
+      - ./ansible.cfg:/etc/ansible/ansible.cfg
+    networks:
+      - ansible-net
+    stdin_open: true
+    tty: true
+    depends_on:
+      - node1
+      - node2
+
+  node1:
+    image: ubuntu:26.04
+    container_name: node1
+    hostname: node1
+    networks:
+      - ansible-net
+    ports:
+      - "8001:80"
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+    command: /bin/bash -c "apt-get update && apt-get install -y openssh-server sudo python3 curl && echo 'root:testpass' | chpasswd && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config && mkdir -p /run/sshd && /usr/sbin/sshd -D"
+
+  node2:
+    image: ubuntu:26.04
+    container_name: node2
+    hostname: node2
+    networks:
+      - ansible-net
+    ports:
+      - "8002:80"
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+    command: /bin/bash -c "apt-get update && apt-get install -y openssh-server sudo python3 curl && echo 'root:testpass' | chpasswd && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config && mkdir -p /run/sshd && /usr/sbin/sshd -D"
+
+networks:
+  ansible-net:
+    driver: bridge
