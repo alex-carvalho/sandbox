@@ -53,3 +53,15 @@
     - name: Restart Apache2
       shell: service apache2 restart || /usr/sbin/apache2ctl restart
       ignore_errors: yes
+
+    # register: can store the output of a command
+    - name: Check Apache2 status
+      shell: service apache2 status || /usr/sbin/apache2ctl status
+      register: apache_status
+      ignore_errors: yes
+
+    # we can use debug to display information
+    - name: Display Apache status
+      debug:
+        msg: "Apache2 status: {{ apache_status }}"
+
