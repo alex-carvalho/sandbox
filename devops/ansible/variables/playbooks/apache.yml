@@ -5,12 +5,22 @@
   vars:
     apache_port: 80
     document_root: /var/www/html
+    network_utilities:
+      - curl
+      - wget
 
   tasks:
     - name: Update package cache
       apt:
         update_cache: yes
         cache_valid_time: 3600
+
+    # using loops to install multiple packages
+    - name: Install network utilities
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ network_utilities }}"
 
     - name: Install Apache2
       apt:
