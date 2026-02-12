@@ -5,6 +5,7 @@
   vars:
     apache_port: 80
     document_root: /var/www/html
+    enable_ssl: false
     network_utilities:
       - curl
       - wget
@@ -26,6 +27,18 @@
       apt:
         name: apache2
         state: present
+
+    # using conditionals
+    - name: Install SSL module for Apache
+      apt:
+        name: openssl
+        state: present
+      when: enable_ssl == true
+
+    - name: Enable SSL module
+      shell: a2enmod ssl
+      when: enable_ssl
+      ignore_errors: yes
 
     - name: Enable Apache2 service
       shell: service apache2 start || /usr/sbin/apache2ctl start
