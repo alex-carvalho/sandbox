@@ -1,0 +1,57 @@
+services:
+  pd0:
+    image: pingcap/pd:v7.1.2
+    container_name: tikv-pd0
+    network_mode: host
+    command:
+      - --name=pd0
+      - --client-urls=http://0.0.0.0:2379
+      - --peer-urls=http://0.0.0.0:2380
+      - --advertise-client-urls=http://127.0.0.1:2379
+      - --advertise-peer-urls=http://127.0.0.1:2380
+      - --initial-cluster=pd0=http://127.0.0.1:2380
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:2379/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tikv0:
+    image: pingcap/tikv:v7.1.2
+    container_name: tikv-node0
+    network_mode: host
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=127.0.0.1:20160
+      - --pd=127.0.0.1:2379
+    depends_on:
+      pd0:
+        condition: service_healthy
+    restart: unless-stopped
+
+  tikv1:
+    image: pingcap/tikv:v7.1.2
+    container_name: tikv-node1
+    network_mode: host
+    command:
+      - --addr=0.0.0.0:20161
+      - --advertise-addr=127.0.0.1:20161
+      - --pd=127.0.0.1:2379
+    depends_on:
+      pd0:
+        condition: service_healthy
+    restart: unless-stopped
+
+  tikv2:
+    image: pingcap/tikv:v7.1.2
+    container_name: tikv-node2
+    network_mode: host
+    command:
+      - --addr=0.0.0.0:20162
+      - --advertise-addr=127.0.0.1:20162
+      - --pd=127.0.0.1:2379
+    depends_on:
+      pd0:
+        condition: service_healthy
+    restart: unless-stopped
