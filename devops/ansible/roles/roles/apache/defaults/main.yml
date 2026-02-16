@@ -1,0 +1,6 @@
+---
+apache_port: 80
+document_root: /var/www/html
+network_utilities:
+  - curl
+  - wget

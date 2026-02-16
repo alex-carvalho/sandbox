@@ -1,0 +1,4 @@
+---
+- name: Restart Apache2
+  shell: service apache2 restart || /usr/sbin/apache2ctl restart
+  ignore_errors: yes

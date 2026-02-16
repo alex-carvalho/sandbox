@@ -1,0 +1,14 @@
+---
+- name: Setup Apache Web Server with Variable-based Configuration
+  hosts: webservers
+  become: yes
+  vars:
+    apache_port: 80
+    document_root: /var/www/html
+    network_utilities:
+      - curl
+      - wget
+
+  roles:
+    - apache
+

@@ -1,0 +1,37 @@
+---
+# Main tasks for Apache role
+- name: Update package cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install network utilities
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ network_utilities }}"
+
+- name: Install Apache2
+  apt:
+    name: apache2
+    state: present
+
+- name: Enable Apache2 service
+  shell: service apache2 start || /usr/sbin/apache2ctl start
+  ignore_errors: yes
+
+- name: Copy index.html to web server
+  template:
+    src: index.html.j2
+    dest: "{{ document_root }}/index.html"
+    mode: '0644'
+  notify: Restart Apache2
+
+- name: Check Apache2 status
+  shell: service apache2 status || /usr/sbin/apache2ctl status
+  register: apache_status
+  ignore_errors: yes
+
+- name: Display Apache status
+  debug:
+    msg: "Apache2 status: {{ apache_status }}"
