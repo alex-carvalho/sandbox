@@ -1,9 +1,8 @@
 services:
   ansible-master:
-    image: ansible-dynamic-inventory-master
+    image: ansible-master
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../shared/master
     container_name: ansible-master
     hostname: ansible-master
     volumes:
