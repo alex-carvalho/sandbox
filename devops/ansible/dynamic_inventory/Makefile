@@ -2,6 +2,7 @@ build:
 	docker-compose build
 
 up: build
+	docker rm -f ansible-master node1 node2 2>/dev/null || true
 	docker-compose up -d
 
 down:
