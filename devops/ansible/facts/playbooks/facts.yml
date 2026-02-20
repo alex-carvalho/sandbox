@@ -1,0 +1,43 @@
+- hosts: all
+  gather_facts: yes
+  become: yes
+  tasks:
+
+    # BUILT-IN FACTS
+    - name: show built-in facts
+      debug:
+        msg:
+          - "hostname    : {{ ansible_hostname }}"
+          - "OS          : {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "kernel      : {{ ansible_kernel }}"
+          - "arch        : {{ ansible_architecture }}"
+          - "default IPv4: {{ ansible_default_ipv4.address | default('n/a') }}"
+          - "total RAM   : {{ ansible_memtotal_mb }} MB"
+          - "CPU cores   : {{ ansible_processor_vcpus }}"
+
+    # 2. DEPLOY CUSTOM FACTS
+    - name: create facts.d directory
+      file:
+        path: /etc/ansible/facts.d
+        state: directory
+        mode: '0755'
+
+    - name: deploy executable custom fact (system_check.fact)
+      copy:
+        src: files/system_check.fact
+        dest: /etc/ansible/facts.d/system_check.fact
+        mode: '0755'
+
+    # 3. RELOAD FACTS
+    - name: reload facts
+      setup:
+
+    
+    # 4. CUSTOM FACTS — executable script
+    - name: show custom facts from system_check.fact (executable)
+      debug:
+        msg:
+          - "python     : {{ ansible_local.system_check.python_version }}"
+          - "arch       : {{ ansible_local.system_check.arch }}"
+          - "cpu count  : {{ ansible_local.system_check.cpu_count }}"
+          - "kernel     : {{ ansible_local.system_check.kernel }}"

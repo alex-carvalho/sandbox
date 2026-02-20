@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+"""
+Custom fact script: executed by Ansible on the managed node.
+Must output valid JSON to stdout.
+"""
+import json
+import os
+import platform
+
+data = {
+    "python_version": platform.python_version(),
+    "arch": platform.machine(),
+    "cpu_count": os.cpu_count(),
+    "kernel": platform.release(),
+}
+
+print(json.dumps(data))

@@ -1,0 +1,40 @@
+services:
+  ansible-master:
+    image: ansible-master
+    build:
+      context: ../shared/master
+    container_name: ansible-master
+    hostname: ansible-master
+    volumes:
+      - ./playbooks:/etc/ansible/playbooks
+      - ./inventory:/etc/ansible/inventory
+      - ./ansible.cfg:/etc/ansible/ansible.cfg
+    networks:
+      - ansible-net
+    stdin_open: true
+    tty: true
+    depends_on:
+      - node1
+      - node2
+
+  node1:
+    image: ansible-node
+    build:
+      context: ../shared/node
+    container_name: node1
+    hostname: node1
+    networks:
+      - ansible-net
+
+  node2:
+    image: ansible-node
+    build:
+      context: ../shared/node
+    container_name: node2
+    hostname: node2
+    networks:
+      - ansible-net
+
+networks:
+  ansible-net:
+    driver: bridge
