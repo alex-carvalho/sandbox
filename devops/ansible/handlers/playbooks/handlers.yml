@@ -1,0 +1,62 @@
+---
+- name: Example of Ansible handlers
+  hosts: webservers
+  become: yes
+
+  vars:
+    document_root: /var/www/html
+
+  tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install Apache2
+      apt:
+        name: apache2
+        state: present
+
+    - name: Ensure Apache2 is started
+      service:
+        name: apache2
+        state: started
+
+    - name: Configure default Apache vhost
+      template:
+        src: files/000-default.conf.j2
+        dest: /etc/apache2/sites-available/000-default.conf
+        mode: '0644'
+      notify: apache config changed
+
+    - name: Deploy demo index page
+      template:
+        src: files/index.html.j2
+        dest: "{{ document_root }}/index.html"
+        mode: '0644'
+      notify: apache content changed
+
+    - name: Run handlers now (instead of waiting end of play)
+      meta: flush_handlers
+
+    - name: Validate apache status
+      shell: service apache2 status || /usr/sbin/apache2ctl status
+      register: apache_status
+      changed_when: false
+
+    - name: Display apache status
+      debug:
+        msg: "Apache2 status on {{ inventory_hostname }}: {{ apache_status.stdout_lines | default([]) }}"
+
+  handlers:
+    - name: Reload Apache2
+      listen: apache config changed
+      service:
+        name: apache2
+        state: reloaded
+
+    - name: Restart Apache2
+      listen: apache content changed
+      service:
+        name: apache2
+        state: restarted
