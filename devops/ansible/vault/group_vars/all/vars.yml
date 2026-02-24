@@ -1,0 +1,3 @@
+---
+app_name: "Vault Demo App"
+document_root: /var/www/html

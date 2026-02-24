@@ -1,0 +1,70 @@
+---
+- name: Ansible Vault Demo - Deploy app using encrypted secrets
+  hosts: webservers
+  become: yes
+
+  tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install Apache2
+      apt:
+        name: apache2
+        state: present
+
+    - name: Ensure Apache2 is started
+      shell: service apache2 start || /usr/sbin/apache2ctl start
+      ignore_errors: yes
+
+    - name: Deploy index page using vault-encrypted secrets
+      copy:
+        dest: "{{ document_root }}/index.html"
+        mode: '0644'
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>{{ app_name }}</title>
+            <style>
+              body { font-family: Arial, sans-serif; background: #1e1e2e; color: #cdd6f4;
+                     display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+              .card { background: #313244; padding: 40px; border-radius: 12px;
+                      box-shadow: 0 0 30px rgba(0,0,0,0.4); max-width: 500px; width: 100%; }
+              h1 { color: #cba6f7; margin-top: 0; }
+              .secret { background: #45475a; border-radius: 6px; padding: 10px 16px;
+                        margin: 8px 0; font-family: monospace; }
+              .label { color: #a6e3a1; font-size: 0.8em; margin-bottom: 4px; }
+              .value { color: #f38ba8; }
+              p { color: #bac2de; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <h1>{{ app_name }}</h1>
+              <p>Secrets below were stored encrypted with Ansible Vault and decrypted at deploy time:</p>
+              <div class="secret">
+                <div class="label">vault_db_user</div>
+                <div class="value">{{ vault_db_user }}</div>
+              </div>
+              <div class="secret">
+                <div class="label">vault_db_password</div>
+                <div class="value">{{ vault_db_password }}</div>
+              </div>
+              <div class="secret">
+                <div class="label">vault_api_key</div>
+                <div class="value">{{ vault_api_key }}</div>
+              </div>
+              <p style="margin-bottom:0; color:#6c7086;">Host: {{ inventory_hostname }}</p>
+            </div>
+          </body>
+          </html>
+
+    - name: Restart Apache2
+      shell: service apache2 restart || /usr/sbin/apache2ctl restart
+      ignore_errors: yes
+
+    - name: Confirm deployment
+      debug:
+        msg: "Deployed to {{ inventory_hostname }} using vault secrets for user '{{ vault_db_user }}'"
