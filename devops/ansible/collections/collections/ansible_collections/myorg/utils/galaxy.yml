@@ -1,0 +1,13 @@
+namespace: myorg
+name: utils
+version: 1.0.0
+readme: README.md
+description: Custom utilities collection for the Ansible Collections POC
+authors:
+  - Your Name
+license:
+  - GPL-2.0-or-later
+tags:
+  - utils
+  - demo
+repository: https://github.com/myorg/ansible-collection-utils

@@ -1,0 +1,125 @@
+---
+- name: Ansible Collections POC - Galaxy + Custom collection
+  hosts: webservers
+  become: yes
+
+  vars:
+    document_root: /var/www/html
+
+  tasks:
+    - name: Update package cache
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install Apache2
+      ansible.builtin.apt:
+        name: apache2
+        state: present
+
+    - name: Ensure Apache2 is started
+      ansible.builtin.shell: service apache2 start || /usr/sbin/apache2ctl start
+      ignore_errors: yes
+
+    # --- community.general collection ---
+
+    - name: Create app config file using community.general.ini_file
+      community.general.ini_file:
+        path: /etc/myapp.ini
+        section: server
+        option: port
+        value: "80"
+        mode: '0644'
+
+    - name: Set app name in config
+      community.general.ini_file:
+        path: /etc/myapp.ini
+        section: server
+        option: name
+        value: "Collections Demo"
+
+    - name: Set environment in config
+      community.general.ini_file:
+        path: /etc/myapp.ini
+        section: app
+        option: environment
+        value: "production"
+
+    - name: Read back the generated config
+      ansible.builtin.slurp:
+        src: /etc/myapp.ini
+      register: app_config
+
+    # --- myorg.utils custom local collection ---
+
+    - name: Gather system info using custom myorg.utils.system_info module
+      myorg.utils.system_info:
+        message: "Deployed via Ansible Collections!"
+      register: info
+
+    - name: Display system info from custom module
+      ansible.builtin.debug:
+        msg:
+          - "Message  : {{ info.message }}"
+          - "Hostname : {{ info.hostname }}"
+          - "Platform : {{ info.platform }}"
+          - "Python   : {{ info.python_version }}"
+
+    # --- ansible.posix collection ---
+
+    - name: Set file permissions using ansible.posix.acl
+      ansible.posix.acl:
+        path: /etc/myapp.ini
+        entry: "user:root:rw-"
+        state: present
+      ignore_errors: yes
+
+    - name: Deploy index page showing collection output
+      ansible.builtin.copy:
+        dest: "{{ document_root }}/index.html"
+        mode: '0644'
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Ansible Collections POC</title>
+            <style>
+              body { font-family: Arial, sans-serif; background: #1e1e2e; color: #cdd6f4;
+                     display: flex; justify-content: center; align-items: center;
+                     min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+              .card { background: #313244; padding: 40px; border-radius: 12px;
+                      box-shadow: 0 0 30px rgba(0,0,0,0.4); max-width: 600px; width: 100%; }
+              h1 { color: #cba6f7; margin-top: 0; }
+              h2 { color: #89b4fa; font-size: 1em; margin: 20px 0 8px; }
+              .block { background: #45475a; border-radius: 6px; padding: 10px 16px;
+                       font-family: monospace; white-space: pre-wrap; font-size: 0.9em; }
+              .tag { display: inline-block; background: #a6e3a1; color: #1e1e2e;
+                     font-size: 0.75em; padding: 2px 8px; border-radius: 4px;
+                     margin-right: 6px; margin-bottom: 4px; }
+              .label { color: #94e2d5; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <h1>Ansible Collections POC</h1>
+              <span class="tag">community.general</span>
+              <span class="tag">ansible.posix</span>
+              <span class="tag">myorg.utils</span>
+
+              <h2>Custom module output (myorg.utils.system_info)</h2>
+              <div class="block"><span class="label">hostname :</span> {{ info.hostname }}
+          <span class="label">platform :</span> {{ info.platform }}
+          <span class="label">python   :</span> {{ info.python_version }}
+          <span class="label">message  :</span> {{ info.message }}</div>
+
+              <h2>Generated config (community.general.ini_file)</h2>
+              <div class="block">{{ app_config.content | b64decode }}</div>
+
+              <p style="margin-bottom:0; color:#6c7086;">Host: {{ inventory_hostname }}</p>
+            </div>
+          </body>
+          </html>
+
+    - name: Restart Apache2
+      ansible.builtin.shell: service apache2 restart || /usr/sbin/apache2ctl restart
+      ignore_errors: yes
