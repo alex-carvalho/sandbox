@@ -8,7 +8,6 @@ services:
     volumes:
       - ./playbooks:/etc/ansible/playbooks
       - ./inventory:/etc/ansible/inventory
-      - ./collections:/etc/ansible/collections
       - ./requirements.yml:/etc/ansible/requirements.yml
       - ./ansible.cfg:/etc/ansible/ansible.cfg
     networks:
@@ -28,7 +27,7 @@ services:
     networks:
       - ansible-net
     ports:
-      - "8001:80"
+      - "8443:443"
 
   node2:
     image: ansible-node
@@ -39,7 +38,7 @@ services:
     networks:
       - ansible-net
     ports:
-      - "8002:80"
+      - "8444:443"
 
 networks:
   ansible-net:

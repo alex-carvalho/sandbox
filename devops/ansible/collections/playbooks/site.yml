@@ -1,10 +1,13 @@
 ---
-- name: Ansible Collections POC - Galaxy + Custom collection
+- name: Ansible Collections POC - TLS certificate generation with community.crypto
   hosts: webservers
   become: yes
 
   vars:
     document_root: /var/www/html
+    tls_dir: /etc/ssl/myapp
+    cert_country: US
+    cert_org: MyOrg
 
   tasks:
     - name: Update package cache
@@ -12,69 +15,88 @@
         update_cache: yes
         cache_valid_time: 3600
 
-    - name: Install Apache2
+    - name: Install Apache2 and SSL dependencies
       ansible.builtin.apt:
-        name: apache2
+        name:
+          - apache2
+          - openssl
+          - python3-cryptography
         state: present
 
     - name: Ensure Apache2 is started
       ansible.builtin.shell: service apache2 start || /usr/sbin/apache2ctl start
       ignore_errors: yes
 
-    # --- community.general collection ---
-
-    - name: Create app config file using community.general.ini_file
-      community.general.ini_file:
-        path: /etc/myapp.ini
-        section: server
-        option: port
-        value: "80"
-        mode: '0644'
-
-    - name: Set app name in config
-      community.general.ini_file:
-        path: /etc/myapp.ini
-        section: server
-        option: name
-        value: "Collections Demo"
-
-    - name: Set environment in config
-      community.general.ini_file:
-        path: /etc/myapp.ini
-        section: app
-        option: environment
-        value: "production"
-
-    - name: Read back the generated config
-      ansible.builtin.slurp:
-        src: /etc/myapp.ini
-      register: app_config
-
-    # --- myorg.utils custom local collection ---
-
-    - name: Gather system info using custom myorg.utils.system_info module
-      myorg.utils.system_info:
-        message: "Deployed via Ansible Collections!"
-      register: info
-
-    - name: Display system info from custom module
-      ansible.builtin.debug:
-        msg:
-          - "Message  : {{ info.message }}"
-          - "Hostname : {{ info.hostname }}"
-          - "Platform : {{ info.platform }}"
-          - "Python   : {{ info.python_version }}"
-
-    # --- ansible.posix collection ---
-
-    - name: Set file permissions using ansible.posix.acl
-      ansible.posix.acl:
-        path: /etc/myapp.ini
-        entry: "user:root:rw-"
-        state: present
+    - name: Enable Apache SSL module
+      ansible.builtin.shell: a2enmod ssl
       ignore_errors: yes
 
-    - name: Deploy index page showing collection output
+    - name: Create TLS directory
+      ansible.builtin.file:
+        path: "{{ tls_dir }}"
+        state: directory
+        mode: '0755'
+
+    # --- community.crypto ---
+
+    - name: Generate RSA private key (community.crypto.openssl_privatekey)
+      community.crypto.openssl_privatekey:
+        path: "{{ tls_dir }}/server.key"
+        size: 2048
+        mode: '0600'
+
+    - name: Generate CSR (community.crypto.openssl_csr)
+      community.crypto.openssl_csr:
+        path: "{{ tls_dir }}/server.csr"
+        privatekey_path: "{{ tls_dir }}/server.key"
+        country_name: "{{ cert_country }}"
+        organization_name: "{{ cert_org }}"
+        common_name: "{{ inventory_hostname }}"
+
+    - name: Issue self-signed certificate (community.crypto.x509_certificate)
+      community.crypto.x509_certificate:
+        path: "{{ tls_dir }}/server.crt"
+        privatekey_path: "{{ tls_dir }}/server.key"
+        csr_path: "{{ tls_dir }}/server.csr"
+        provider: selfsigned
+        selfsigned_not_after: "+365d"
+
+    - name: Read certificate info (community.crypto.x509_certificate_info)
+      community.crypto.x509_certificate_info:
+        path: "{{ tls_dir }}/server.crt"
+      register: cert_info
+
+    - name: Display certificate details
+      ansible.builtin.debug:
+        msg:
+          - "Subject   : {{ cert_info.subject }}"
+          - "Not before: {{ cert_info.not_before }}"
+          - "Not after : {{ cert_info.not_after }}"
+
+    - name: Deploy Apache SSL vhost config
+      ansible.builtin.copy:
+        dest: /etc/apache2/sites-available/ssl-poc.conf
+        mode: '0644'
+        content: |
+          <VirtualHost *:443>
+            ServerName {{ inventory_hostname }}
+            DocumentRoot {{ document_root }}
+
+            SSLEngine on
+            SSLCertificateFile    {{ tls_dir }}/server.crt
+            SSLCertificateKeyFile {{ tls_dir }}/server.key
+
+            <Directory {{ document_root }}>
+              AllowOverride All
+              Require all granted
+            </Directory>
+          </VirtualHost>
+
+    - name: Enable the SSL vhost
+      ansible.builtin.shell: a2ensite ssl-poc.conf
+      ignore_errors: yes
+
+    - name: Deploy index page showing certificate details
       ansible.builtin.copy:
         dest: "{{ document_root }}/index.html"
         mode: '0644'
@@ -82,7 +104,7 @@
           <!DOCTYPE html>
           <html>
           <head>
-            <title>Ansible Collections POC</title>
+            <title>Ansible Collections - community.crypto POC</title>
             <style>
               body { font-family: Arial, sans-serif; background: #1e1e2e; color: #cdd6f4;
                      display: flex; justify-content: center; align-items: center;
@@ -92,28 +114,23 @@
               h1 { color: #cba6f7; margin-top: 0; }
               h2 { color: #89b4fa; font-size: 1em; margin: 20px 0 8px; }
               .block { background: #45475a; border-radius: 6px; padding: 10px 16px;
-                       font-family: monospace; white-space: pre-wrap; font-size: 0.9em; }
+                       font-family: monospace; white-space: pre-wrap; font-size: 0.9em; line-height: 1.7; }
               .tag { display: inline-block; background: #a6e3a1; color: #1e1e2e;
-                     font-size: 0.75em; padding: 2px 8px; border-radius: 4px;
-                     margin-right: 6px; margin-bottom: 4px; }
+                     font-size: 0.75em; padding: 2px 8px; border-radius: 4px; margin-right: 6px; }
               .label { color: #94e2d5; }
             </style>
           </head>
           <body>
             <div class="card">
               <h1>Ansible Collections POC</h1>
-              <span class="tag">community.general</span>
-              <span class="tag">ansible.posix</span>
-              <span class="tag">myorg.utils</span>
+              <span class="tag">community.crypto</span>
 
-              <h2>Custom module output (myorg.utils.system_info)</h2>
-              <div class="block"><span class="label">hostname :</span> {{ info.hostname }}
-          <span class="label">platform :</span> {{ info.platform }}
-          <span class="label">python   :</span> {{ info.python_version }}
-          <span class="label">message  :</span> {{ info.message }}</div>
-
-              <h2>Generated config (community.general.ini_file)</h2>
-              <div class="block">{{ app_config.content | b64decode }}</div>
+              <h2>Generated TLS Certificate (community.crypto)</h2>
+              <div class="block"><span class="label">host       :</span> {{ inventory_hostname }}
+          <span class="label">subject    :</span> {{ cert_info.subject }}
+          <span class="label">not before :</span> {{ cert_info.not_before }}
+          <span class="label">not after  :</span> {{ cert_info.not_after }}
+          <span class="label">serial     :</span> {{ cert_info.serial_number }}</div>
 
               <p style="margin-bottom:0; color:#6c7086;">Host: {{ inventory_hostname }}</p>
             </div>

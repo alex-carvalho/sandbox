@@ -21,11 +21,9 @@ Ansible Collections are a distribution format for bundling and sharing playbooks
 
 ## Collections Used
 
-| Collection | Source | Module used |
+| Collection | Source | Modules used |
 |---|---|---|
-| `community.general` | Ansible Galaxy | `ini_file` — writes INI config files |
-| `ansible.posix` | Ansible Galaxy | `acl` — manages file ACL permissions |
-| `myorg.utils` | Local | `system_info` — custom module, returns hostname/platform/Python version |
+| `community.crypto` | Ansible Galaxy | `openssl_privatekey`, `openssl_csr`, `x509_certificate`, `x509_certificate_info` |
 
 ## Usage
 
@@ -38,6 +36,12 @@ make list    # List all installed collections
 
 ## Testing
 
-Access the deployed pages:
-- Node 1: http://localhost:8001
-- Node 2: http://localhost:8002
+Access the deployed pages over HTTPS (self-signed cert — accept the browser warning):
+- Node 1: https://localhost:8443
+- Node 2: https://localhost:8444
+
+Or via curl skipping cert verification:
+```bash
+curl -k https://localhost:8443
+curl -k https://localhost:8444
+```
