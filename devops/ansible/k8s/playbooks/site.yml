@@ -1,0 +1,135 @@
+---
+- name: Ansible + Kubernetes POC - Deploy nginx app to Kind cluster
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    kubeconfig: "{{ playbook_dir }}/../kubeconfig"
+    app_name: nginx-poc
+    app_image: nginx:alpine
+    app_replicas: 1
+    app_port: 80
+    node_port: 30080
+    k8s_namespace: default
+
+  module_defaults:
+    group/kubernetes.core.k8s:
+      kubeconfig: "{{ kubeconfig }}"
+
+  tasks:
+
+    - name: Ensure namespace exists (kubernetes.core.k8s)
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: "{{ k8s_namespace }}"
+        state: present
+
+
+    - name: Deploy ConfigMap with custom HTML (kubernetes.core.k8s)
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: "{{ app_name }}-html"
+            namespace: "{{ k8s_namespace }}"
+          data:
+            index.html: |
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <title>Ansible + Kubernetes POC</title>
+              </head>
+              <body>
+                  <h1>Ansible + Kubernetes POC</h1>
+              </body>
+              </html>
+
+
+    - name: Create nginx Deployment (kubernetes.core.k8s)
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ k8s_namespace }}"
+            labels:
+              app: "{{ app_name }}"
+          spec:
+            replicas: "{{ app_replicas }}"
+            selector:
+              matchLabels:
+                app: "{{ app_name }}"
+            template:
+              metadata:
+                labels:
+                  app: "{{ app_name }}"
+              spec:
+                containers:
+                  - name: nginx
+                    image: "{{ app_image }}"
+                    ports:
+                      - containerPort: "{{ app_port }}"
+                    volumeMounts:
+                      - name: html
+                        mountPath: /usr/share/nginx/html
+                volumes:
+                  - name: html
+                    configMap:
+                      name: "{{ app_name }}-html"
+
+
+    - name: Create NodePort Service (kubernetes.core.k8s)
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ k8s_namespace }}"
+          spec:
+            type: NodePort
+            selector:
+              app: "{{ app_name }}"
+            ports:
+              - port: "{{ app_port }}"
+                targetPort: "{{ app_port }}"
+                nodePort: "{{ node_port }}"
+
+
+    - name: Wait for Deployment to be ready (kubernetes.core.k8s_info)
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: "{{ app_name }}"
+        namespace: "{{ k8s_namespace }}"
+      register: deployment
+      until: >
+        deployment.resources | length > 0 and
+        (deployment.resources[0].status.readyReplicas | default(0)) == app_replicas
+      retries: 20
+      delay: 5
+
+
+    - name: Fetch running pods info (kubernetes.core.k8s_info)
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ k8s_namespace }}"
+        label_selectors:
+          - "app={{ app_name }}"
+      register: pods
+
+    - name: Display deployment summary
+      ansible.builtin.debug:
+        msg:
+          - "Deployment : {{ app_name }}"
+          - "Replicas   : {{ app_replicas }}"
+          - "Pods       : {{ pods.resources | map(attribute='metadata.name') | list }}"
+          - "App URL    : http://localhost:8080"

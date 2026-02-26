@@ -1,5 +1,2 @@
-- [x] Handlers (`handlers/`)
-- [ ] Ansible Vault
-- [ ] Collections
 - [ ] K8s
 - [ ] Delegation & Orchestration (rolling updates, blue/green deploy)
