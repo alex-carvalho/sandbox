@@ -1,0 +1,12 @@
+[proxies]
+proxy ansible_host=proxy ansible_port=22 ansible_user=root ansible_password=testpass ansible_connection=ssh
+
+[blue]
+app-blue ansible_host=app-blue ansible_port=22 ansible_user=root ansible_password=testpass ansible_connection=ssh
+
+[green]
+app-green ansible_host=app-green ansible_port=22 ansible_user=root ansible_password=testpass ansible_connection=ssh
+
+[apps:children]
+blue
+green

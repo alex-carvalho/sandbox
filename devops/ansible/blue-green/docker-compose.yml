@@ -1,0 +1,53 @@
+services:
+  ansible-master:
+    image: ansible-master
+    build:
+      context: ../shared/master
+    container_name: ansible-master
+    hostname: ansible-master
+    volumes:
+      - ./playbooks:/etc/ansible/playbooks
+      - ./inventory:/etc/ansible/inventory
+      - ./host_vars:/etc/ansible/host_vars
+      - ./ansible.cfg:/etc/ansible/ansible.cfg
+    networks:
+      - bg-net
+    stdin_open: true
+    tty: true
+    depends_on:
+      - proxy
+      - app-blue
+      - app-green
+
+  proxy:
+    image: ansible-node
+    build:
+      context: ../shared/node
+    container_name: proxy
+    hostname: proxy
+    networks:
+      - bg-net
+    ports:
+      - "8080:80"
+
+  app-blue:
+    image: ansible-node
+    build:
+      context: ../shared/node
+    container_name: app-blue
+    hostname: app-blue
+    networks:
+      - bg-net
+
+  app-green:
+    image: ansible-node
+    build:
+      context: ../shared/node
+    container_name: app-green
+    hostname: app-green
+    networks:
+      - bg-net
+
+networks:
+  bg-net:
+    driver: bridge

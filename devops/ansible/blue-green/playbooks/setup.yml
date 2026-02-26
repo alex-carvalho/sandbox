@@ -1,0 +1,91 @@
+---
+- name: Install nginx on app slots and proxy
+  hosts: apps:proxies
+  become: yes
+
+  tasks:
+    - name: Update package cache
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+
+    - name: Ensure nginx is started
+      ansible.builtin.shell: service nginx start || nginx
+      ignore_errors: yes
+
+    - name: Deploy app server config on app nodes
+      ansible.builtin.copy:
+        dest: /etc/nginx/conf.d/app.conf
+        mode: '0644'
+        content: |
+          server {
+              listen 80 default_server;
+              root /var/www/html;
+              index index.html;
+              location / {
+                  try_files $uri $uri/ =404;
+              }
+          }
+      when: inventory_hostname in groups['apps']
+
+    - name: Reload nginx after config deploy
+      ansible.builtin.shell: service nginx reload || nginx -s reload
+      when: inventory_hostname in groups['apps']
+      ignore_errors: yes
+
+- name: Deploy app pages to blue and green slots
+  hosts: apps
+  become: yes
+
+  tasks:
+    - name: Deploy index page using host_vars
+      ansible.builtin.template:
+        src: templates/app.html.j2
+        dest: /var/www/html/index.html
+        mode: '0644'
+
+    - name: Reload nginx
+      ansible.builtin.shell: service nginx reload || nginx -s reload
+      ignore_errors: yes
+
+- name: Configure proxy — initial active slot is blue
+  hosts: proxies
+  become: yes
+
+  vars:
+    active_slot: blue
+    active_host: app-blue
+
+  tasks:
+    - name: Remove default nginx site on proxy
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Deploy proxy config pointing to blue
+      ansible.builtin.template:
+        src: templates/proxy.conf.j2
+        dest: /etc/nginx/conf.d/proxy.conf
+        mode: '0644'
+
+    - name: Reload proxy nginx
+      ansible.builtin.shell: service nginx reload || nginx -s reload
+      ignore_errors: yes
+
+    - name: Health check — verify proxy serves blue
+      ansible.builtin.uri:
+        url: http://localhost
+        return_content: yes
+      register: health
+      retries: 5
+      delay: 2
+      until: health.status == 200
+
+    - name: Setup complete
+      ansible.builtin.debug:
+        msg: "Setup done. Active slot: BLUE (v1) → http://localhost:8080"

@@ -1,0 +1,68 @@
+---
+- name: Detect active slot from proxy config
+  hosts: proxies
+  become: yes
+
+  tasks:
+    - name: Read current proxy config
+      ansible.builtin.shell: "grep 'server app-' /etc/nginx/conf.d/proxy.conf | awk '{print $2}' | cut -d: -f1"
+      register: current_host
+      changed_when: false
+
+    - name: Set slot facts
+      ansible.builtin.set_fact:
+        active_slot:   "{{ 'blue'  if 'app-blue' in current_host.stdout else 'green' }}"
+        inactive_slot: "{{ 'green' if 'app-blue' in current_host.stdout else 'blue' }}"
+
+    - name: Display current state
+      ansible.builtin.debug:
+        msg: "Active: {{ active_slot }} | Deploying to: {{ inactive_slot }}"
+
+    - name: Pass state to next play
+      ansible.builtin.add_host:
+        name: _deploy_state
+        groups: state
+        active_slot:   "{{ active_slot }}"
+        inactive_slot: "{{ inactive_slot }}"
+
+- name: Health check inactive slot and switch proxy
+  hosts: proxies
+  become: yes
+
+  tasks:
+    - name: Resolve target slot from detected state
+      ansible.builtin.set_fact:
+        active_slot: "{{ hostvars['_deploy_state']['inactive_slot'] }}"
+        active_host: "app-{{ hostvars['_deploy_state']['inactive_slot'] }}"
+
+    - name: Verify inactive slot is responding
+      ansible.builtin.uri:
+        url: "http://{{ active_host }}"
+        return_content: yes
+      register: health
+      retries: 5
+      delay: 2
+      until: health.status == 200
+
+    - name: Update proxy config to new active slot
+      ansible.builtin.template:
+        src: templates/proxy.conf.j2
+        dest: /etc/nginx/conf.d/proxy.conf
+        mode: '0644'
+
+    - name: Reload proxy nginx
+      ansible.builtin.shell: service nginx reload || nginx -s reload
+      ignore_errors: yes
+
+    - name: Health check after switch
+      ansible.builtin.uri:
+        url: http://localhost
+        return_content: yes
+      register: health
+      retries: 5
+      delay: 2
+      until: health.status == 200
+
+    - name: Deploy complete
+      ansible.builtin.debug:
+        msg: "Switched! Active slot is now: {{ active_slot | upper }} | http://localhost:8080"
