@@ -1,0 +1,12 @@
+tmp_path = "/tiflash/data"
+
+[logger]
+level = "info"
+
+[raft]
+pd_addr = "pd:2379"
+
+[flash]
+service_addr = "0.0.0.0:3930"
+metrics_port = 8234
+

@@ -1,0 +1,11 @@
+apiVersion: pingcap.com/v1alpha1
+kind: TidbDashboard
+metadata:
+  name: poc
+spec:
+  baseImage: pingcap/tidb-dashboard
+  version: v8.5.5
+  requests:
+    storage: 1Gi
+  clusters:
+    - name: poc

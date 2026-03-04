@@ -1,0 +1,13 @@
+apiVersion: pingcap.com/v1alpha1
+kind: TidbNGMonitoring
+metadata:
+  name: poc
+spec:
+  version: v8.5.5
+  clusters:
+    - name: poc
+  ngMonitoring:
+    baseImage: pingcap/ng-monitoring
+    version: v8.5.5
+    requests:
+      storage: 1Gi
