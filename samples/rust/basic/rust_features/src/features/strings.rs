@@ -4,7 +4,9 @@ pub fn run() {
     println!("simple string literal: {simple}");
 
     let mut simple_mut = "hello"; // this is still a string literal, but we can reassign the variable to point to a different string literal
-    simple_mut = "hello rust";
+    if simple_mut != "" {
+        simple_mut = "hello rust";
+    }
     println!("simple mut string literal: {simple_mut}");
 
     // stored on the heap, mutable, and can grow in size
