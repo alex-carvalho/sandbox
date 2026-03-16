@@ -20,4 +20,22 @@ pub fn run() {
             break;
         }
     }
+
+    let result = return_value_from_loop();
+    println!("The result from the loop is: {result}");
+
+}
+
+fn return_value_from_loop() -> i32 {
+    let mut count = 0;
+
+    let result = loop {
+        count += 1;
+
+        if count >= 10 {
+            break count * 2;
+        }
+    };
+
+    result
 }
