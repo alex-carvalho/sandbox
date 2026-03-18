@@ -4,6 +4,7 @@ pub mod ownership;
 pub mod strings;
 pub mod functions;
 pub mod control_flow;
+pub mod structs;
 
 pub fn run_examples() {
     data_types::run();
@@ -12,4 +13,5 @@ pub fn run_examples() {
     strings::run();
     functions::run();
     control_flow::run();
+    structs::run();
 }
