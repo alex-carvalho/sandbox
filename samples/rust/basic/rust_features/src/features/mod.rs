@@ -5,6 +5,7 @@ pub mod strings;
 pub mod functions;
 pub mod control_flow;
 pub mod structs;
+pub mod pattern_matching;
 
 pub fn run_examples() {
     data_types::run();
@@ -14,4 +15,5 @@ pub fn run_examples() {
     functions::run();
     control_flow::run();
     structs::run();
+    pattern_matching::run();
 }
