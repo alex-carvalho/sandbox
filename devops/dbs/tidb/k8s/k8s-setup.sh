@@ -3,9 +3,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 kind create cluster --name "tidb-poc"
 
-
-
-kubectl apply --server-side -f "${SCRIPT_DIR}/crd.yaml"
+kubectl apply --server-side -f "${SCRIPT_DIR}/1-crd.yaml"
 
 helm repo add pingcap https://charts.pingcap.com/ --force-update
 kubectl get namespace tidb-admin >/dev/null 2>&1 || kubectl create namespace tidb-admin
@@ -17,11 +15,10 @@ kubectl wait --for=condition=Established --timeout=180s crd/tidbdashboards.pingc
 
 # cluster
 kubectl create namespace tidb-cluster
-kubectl apply -n tidb-cluster -f "${SCRIPT_DIR}/cluster.yaml"
-kubectl apply -n tidb-cluster -f "${SCRIPT_DIR}/monitor.yaml"
-kubectl apply -n tidb-cluster -f "${SCRIPT_DIR}/dashboard.yaml"
-kubectl apply -n tidb-cluster -f "${SCRIPT_DIR}/ngmonitor.yaml"
-
+kubectl apply -n tidb-cluster -f "${SCRIPT_DIR}/2-cluster.yaml"
+kubectl apply -n tidb-cluster -f "${SCRIPT_DIR}/3-monitor.yaml"
+kubectl apply -n tidb-cluster -f "${SCRIPT_DIR}/4-dashboard.yaml"
+kubectl apply -n tidb-cluster -f "${SCRIPT_DIR}/5-ngmonitor.yaml"
 
 
 sleep 60
