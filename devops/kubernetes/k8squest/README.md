@@ -43,3 +43,17 @@ vi my-pod.yaml
 k delete pod hungry-app       
 k apply -f my-pod.yaml    
 ```
+
+4 - Service cannot reach pod, fix label 
+- Can edit the service or patch it directly 
+```shell
+k patch svc backend-service -p '{"spec":{"selector":{"app":"backend"}}}'
+```
+
+5 - Service port does not match pod port
+- Can edit the service or patch the targetPort to match the pod port
+
+```shell
+k patch svc web-service -p '{"spec":{"ports":[{"port":80,"targetPort":80}]}}'
+```
+
