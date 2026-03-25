@@ -57,3 +57,13 @@ k patch svc backend-service -p '{"spec":{"selector":{"app":"backend"}}}'
 k patch svc web-service -p '{"spec":{"ports":[{"port":80,"targetPort":80}]}}'
 ```
 
+6 - A multi-container pod where the sidecar container keeps crashing
+- The file that log sidecar container was reading was not created yet, just use `-F` on tail command fix
+```shell
+k get pod -o yaml  app-with-logging   > my-pod.yaml
+vi my-pod.yaml 
+k delete pod app-with-logging           
+k apply -f my-pod.yaml    
+```
+
+7 - Pod is running but the application isn't working. The problem is only visible in logs 
