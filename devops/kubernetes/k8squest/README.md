@@ -67,3 +67,12 @@ k apply -f my-pod.yaml
 ```
 
 7 - Pod is running but the application isn't working. The problem is only visible in logs 
+- Check logs pod, edit to add missing env
+```shell
+k logs database-app
+k get pod -o yaml  database-app > my-pod.yaml
+vi my-pod.yaml 
+k delete pod database-app          
+k apply -f my-pod.yaml   
+
+```
