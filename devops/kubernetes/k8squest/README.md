@@ -74,5 +74,17 @@ k get pod -o yaml  database-app > my-pod.yaml
 vi my-pod.yaml 
 k delete pod database-app          
 k apply -f my-pod.yaml   
+```
 
+8 -  Pod stuck in Init state because the init container never completes        
+- Need to move the pod and the service to k8squest namespace
+```shell
+k get service -o yaml -n default backend-service  > my-service.yaml
+k get pod -o yaml -n default client-app  > my-pod.yaml
+vi my-service.yaml
+vi my-pod.yaml 
+k delete pod -n default client-app  
+k delete service -n default backend-service     
+k apply -f my-pod.yaml  
+k apply -f my-service.yaml 
 ```
