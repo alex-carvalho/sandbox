@@ -6,14 +6,11 @@ import {
 import type { CliRenderer } from "@opentui/core";
 
 export class StatusBar {
-    private renderer: CliRenderer;
     private container: BoxRenderable;
     private statusLabel: TextRenderable;
 
     constructor(renderer: CliRenderer) {
-        this.renderer = renderer;
-    
-        this.container  = new BoxRenderable(this.renderer, {
+        this.container  = new BoxRenderable(renderer, {
             id: "status-bar",
             height: 3,
             border: true,
@@ -23,7 +20,7 @@ export class StatusBar {
             paddingLeft: 2,
             backgroundColor: "#0d1117",
         });
-        this.statusLabel = new TextRenderable(this.renderer, {
+        this.statusLabel = new TextRenderable(renderer, {
             id: "status-label",
             content: "",
             fg: "#8b949e",
