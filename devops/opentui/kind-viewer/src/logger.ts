@@ -1,11 +1,15 @@
 import { appendFileSync } from "fs";
 import { join } from "path";
 
+const LOG_FILE_ENABLED = process.env.LOG_FILE_ENABLED === "true";
+
 const LOG_FILE = join(import.meta.dir, "..", "app.log");
 
 function write(level: string, msg: string) {
   const line = `${new Date().toISOString()} [${level}] ${msg}\n`;
-  appendFileSync(LOG_FILE, line);
+  if (LOG_FILE_ENABLED) {
+    appendFileSync(LOG_FILE, line);
+  }
 }
 
 export const logger = {
