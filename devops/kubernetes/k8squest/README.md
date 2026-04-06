@@ -88,3 +88,12 @@ k delete service -n default backend-service
 k apply -f my-pod.yaml  
 k apply -f my-service.yaml 
 ```
+
+9 - A rolling update has failed because the new container image doesn't exist   
+- Need rollback the deployment to the previous working version    
+
+```shell
+k get rs 
+k rollout status deployment/web-app
+k rollout undo deployment/web-app
+```
