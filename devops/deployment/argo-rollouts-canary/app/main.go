@@ -39,14 +39,14 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 
 func mainHandler(w http.ResponseWriter, r *http.Request) {
 	version := getAppVersion()
-	if version == "1" {
-		healthCounter.WithLabelValues("/", "200").Inc()
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "canary app v1 - OK\n")
-	} else {
+	if version == "2" {
 		healthCounter.WithLabelValues("/", "500").Inc()
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "canary app v2 - ERROR\n")
+		fmt.Fprintf(w, "canary app v%s - ERROR - %s \n", version, os.Getenv("POD_NAME"))
+	} else {
+		healthCounter.WithLabelValues("/", "200").Inc()
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "canary app v%s - OK - %s \n", version, os.Getenv("POD_NAME"))
 	}
 }
 

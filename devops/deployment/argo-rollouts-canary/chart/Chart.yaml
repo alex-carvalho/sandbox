@@ -1,0 +1,6 @@
+apiVersion: v2
+name: canary-app
+description: Canary deployment of the canary-app with Argo Rollouts and automatic Prometheus-based rollback
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

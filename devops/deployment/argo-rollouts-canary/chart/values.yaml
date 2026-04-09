@@ -1,0 +1,20 @@
+replicaCount: 5
+
+image:
+  repository: canary-app
+  tag: "latest"
+  pullPolicy: Never
+
+appVersion: "1"
+
+analysis:
+  interval: 15s
+  failureLimit: 3
+  prometheusAddress: http://prometheus.monitoring.svc.cluster.local:9090
+
+service:
+  type: NodePort
+  # Optional: set specific nodePort numbers. Omit or set to null for automatic assignment.
+  nodePort:
+    http: null
+    metrics: null
