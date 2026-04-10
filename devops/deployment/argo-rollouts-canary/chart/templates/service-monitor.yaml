@@ -1,14 +1,14 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: canary-app-service-monitor
+  name: my-app-service-monitor
   namespace: {{ .Release.Namespace }}
   labels:
-    app: canary-app-service-monitor
+    app: my-app-service-monitor
 spec:
   selector:
     matchLabels:
-      app: canary-app
+      app: my-app
   endpoints:
     - port: metrics
       interval: 30s

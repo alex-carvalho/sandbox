@@ -10,48 +10,35 @@ import (
 )
 
 var (
-	healthCounter = prometheus.NewCounterVec(
+	requestCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "http_requests_total",
 			Help: "Total HTTP requests",
 		},
-		[]string{"endpoint", "status"},
+		[]string{"result"},
 	)
 )
 
 func init() {
-	prometheus.MustRegister(healthCounter)
-}
-
-func getAppVersion() string {
-	version := os.Getenv("APP_VERSION")
-	if version == "" {
-		return "1"
-	}
-	return version
+	prometheus.MustRegister(requestCounter)
+	requestCounter.WithLabelValues("success").Add(0)
+	requestCounter.WithLabelValues("error").Add(0)
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
-	healthCounter.WithLabelValues("/health", "200").Inc()
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "OK\n")
-}
+	dbUrl := os.Getenv("DB_URL")
 
-func mainHandler(w http.ResponseWriter, r *http.Request) {
-	version := getAppVersion()
-	if version == "2" {
-		healthCounter.WithLabelValues("/", "500").Inc()
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "canary app v%s - ERROR - %s \n", version, os.Getenv("POD_NAME"))
+	if dbUrl == "" {
+		requestCounter.WithLabelValues("error").Inc()
 	} else {
-		healthCounter.WithLabelValues("/", "200").Inc()
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "canary app v%s - OK - %s \n", version, os.Getenv("POD_NAME"))
+		requestCounter.WithLabelValues("success").Inc()
 	}
+	// return ok to not fail on health check, but count errors in Prometheus
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "DB_URL = %s - %s\n", dbUrl, os.Getenv("POD_NAME"))
 }
 
 func main() {
-	http.HandleFunc("/", mainHandler)
 	http.HandleFunc("/health", healthHandler)
 	http.Handle("/metrics", promhttp.Handler())
 

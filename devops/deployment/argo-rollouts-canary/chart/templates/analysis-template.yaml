@@ -1,18 +1,18 @@
 apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
-  name: canary-app-error-rate
+  name: my-app-error-rate
   namespace: {{ .Release.Namespace }}
 spec:
   metrics:
     - name: app-health
       interval: {{ .Values.analysis.interval }}
       failureLimit: {{ .Values.analysis.failureLimit }}
-      successCondition: result[0] < 0.1
+      successCondition: result[0] > 0.99
       provider:
         prometheus:
-          address: http://prometheus.monitoring.svc.cluster.local:9090
+          address: {{ .Values.analysis.prometheusAddress }}
           query: |
-            sum(rate(http_requests_total{job="canary-app",endpoint="/",status="500"}[1m]))
+            sum(rate(http_requests_total{job="my-app",result="success"}[1m]))
             /
-            sum(rate(http_requests_total{job="canary-app",endpoint="/"}[1m]))
+            sum(rate(http_requests_total{job="my-app"}[1m]))
