@@ -49,6 +49,32 @@ proc search*(t: Trie, word: string): bool =
   return current.isEndOfWord
 
 
+proc isEmpty(node: TrieNode): bool =
+  for child in node.children:
+    if child != nil: return false
+  return true
+
+proc deleteNode(node: TrieNode, word: string, depth: int): bool =
+  if node == nil:
+    return false
+
+  if depth == word.len:
+    if not node.isEndOfWord:
+      return false
+    node.isEndOfWord = false
+    return isEmpty(node)
+
+  let index = ord(word[depth]) - ord('a')
+  if deleteNode(node.children[index], word, depth + 1):
+    node.children[index] = nil
+    return not node.isEndOfWord and isEmpty(node)
+
+  return false
+
+proc delete*(t: Trie, word: string) =
+  discard deleteNode(t.root, word, 0)
+
+
 proc startsWith*(t: Trie, prefix: string): bool =
   var current = t.root
 
@@ -61,6 +87,18 @@ proc startsWith*(t: Trie, prefix: string): bool =
     current = current.children[index]
 
   return true
+
+
+proc collectWords(node: TrieNode, current: var string, results: var seq[string]) =
+  if node.isEndOfWord:
+    results.add(current)
+
+  for i in 0..25:
+    if node.children[i] != nil:
+      let c = char(ord('a') + i)
+      current.add(c)
+      collectWords(node.children[i], current, results)
+      current.setLen(current.len - 1)
 
 
 proc findStartsWith*(t: Trie, prefix: string): seq[string] =
@@ -78,23 +116,6 @@ proc findStartsWith*(t: Trie, prefix: string): seq[string] =
   var currentPrefix = prefix
   collectWords(current, currentPrefix, result)
 
-proc collectWords(node: TrieNode, current: var string, results: var seq[string]) =
-  if node.isEndOfWord:
-    results.add(current)
-
-  for i in 0..25:
-    if node.children[i] != nil:
-      let c = char(ord('a') + i)
-      current.add(c)
-      collectWords(node.children[i], current, results)
-      current.setLen(current.len - 1)
-
-
-proc `$`*(t: Trie): string =
-  var sb = ""
-  buildString(t.root, sb, "<root>", "", "")
-  result = sb
-
 proc buildString(node: TrieNode, sb: var string, label: string, prefix: string, childPrefix: string) =
   sb.add(prefix & label & (if node.isEndOfWord: "*" else: "") & "\n")
 
@@ -102,3 +123,9 @@ proc buildString(node: TrieNode, sb: var string, label: string, prefix: string, 
     if child != nil:
       let childLabel = $char(ord('a') + i)
       buildString(child, sb, childLabel, childPrefix & "├── ", childPrefix & "│   ")
+
+proc `$`*(t: Trie): string =
+  var sb = ""
+  buildString(t.root, sb, "<root>", "", "")
+  result = sb
+

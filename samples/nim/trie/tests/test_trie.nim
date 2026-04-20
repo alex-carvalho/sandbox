@@ -35,3 +35,23 @@ suite "Trie":
     check "airbus" in airResults
 
     check trie.findStartsWith("xyz").len == 0
+
+  test "testDelete":
+    var trie = newTrie()
+    trie.insert("apple")
+    trie.insert("app")
+
+    check trie.search("apple")
+    check trie.search("app")
+
+    trie.delete("app")
+    check not trie.search("app")
+    check trie.search("apple")
+
+    trie.delete("apple")
+    check not trie.search("apple")
+
+    trie.insert("bat")
+    check trie.search("bat")
+    trie.delete("bat")
+    check not trie.search("bat")
