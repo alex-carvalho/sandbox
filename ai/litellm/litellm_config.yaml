@@ -1,0 +1,12 @@
+model_list:
+  - model_name: llama3
+    litellm_params:
+      model: bedrock/meta.llama3-70b-instruct-v1:0
+      aws_region_name: us-east-1
+      api_key: os.environ/AWS_BEARER_TOKEN_BEDROCK
+
+general_settings:
+  master_key: "sk-xxxx"
+
+environment_variables:
+  AWS_BEARER_TOKEN_BEDROCK: "xxxx"
