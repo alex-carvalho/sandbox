@@ -11,4 +11,4 @@ spec:
       app: my-app
   endpoints:
     - port: metrics
-      interval: 30s
+      interval: 15s

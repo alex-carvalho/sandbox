@@ -6,13 +6,13 @@ metadata:
 spec:
   metrics:
     - name: app-health
-      interval: {{ .Values.analysis.interval }}
-      failureLimit: {{ .Values.analysis.failureLimit }}
+      interval: 15s
+      failureLimit: 3
       successCondition: result[0] > 0.99
       provider:
         prometheus:
-          address: {{ .Values.analysis.prometheusAddress }}
+          address: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
           query: |
-            sum(rate(http_requests_total{job="my-app",result="success"}[1m]))
+            sum(rate(http_requests_total{job="my-app-canary",result="success"}[1m]))
             /
-            sum(rate(http_requests_total{job="my-app"}[1m]))
+            sum(rate(http_requests_total{job="my-app-canary"}[1m]))

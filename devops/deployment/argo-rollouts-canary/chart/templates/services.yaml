@@ -22,6 +22,8 @@ kind: Service
 metadata:
   name: my-app-stable
   namespace: {{ .Release.Namespace }}
+  labels:
+    app: my-app
 spec:
   selector:
     app: my-app
@@ -39,6 +41,8 @@ kind: Service
 metadata:
   name: my-app-canary
   namespace: {{ .Release.Namespace }}
+  labels:
+    app: my-app
 spec:
   selector:
     app: my-app

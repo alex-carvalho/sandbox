@@ -7,10 +7,6 @@ image:
 
 dbUrl: "postgres://user:pass@db:5432/mydb"
 
-analysis:
-  interval: 15s
-  failureLimit: 3
-  prometheusAddress: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
 
 service:
   type: NodePort

@@ -25,21 +25,27 @@ func init() {
 	requestCounter.WithLabelValues("error").Add(0)
 }
 
-func healthHandler(w http.ResponseWriter, r *http.Request) {
+func apiHandler(w http.ResponseWriter, r *http.Request) {
 	dbUrl := os.Getenv("DB_URL")
 
 	if dbUrl == "" {
 		requestCounter.WithLabelValues("error").Inc()
+		w.WriteHeader(http.StatusInternalServerError)
 	} else {
 		requestCounter.WithLabelValues("success").Inc()
+		w.WriteHeader(http.StatusOK)
 	}
-	// return ok to not fail on health check, but count errors in Prometheus
-	w.WriteHeader(http.StatusOK)
+
 	fmt.Fprintf(w, "DB_URL = %s - %s\n", dbUrl, os.Getenv("POD_NAME"))
+}
+
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }
 
 func main() {
 	http.HandleFunc("/health", healthHandler)
+	http.HandleFunc("/api", apiHandler)
 	http.Handle("/metrics", promhttp.Handler())
 
 	fmt.Println("Starting canary exporter on :8080")

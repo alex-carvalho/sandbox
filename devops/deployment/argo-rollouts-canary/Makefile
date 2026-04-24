@@ -71,13 +71,14 @@ promote:
 	kubectl argo rollouts promote $(ROLLOUT_NAME) -n $(NAMESPACE)
 
 curl:
-	@echo 'curl -s http://my-app.demo.svc.cluster.local:8080'
-	kubectl run curl-debug -it --rm --image=curlimages/curl --restart=Never -- sh
+	kubectl run curl-debug -it --rm --image=curlimages/curl --restart=Never -- \
+		sh -c 'while true; do curl -s http://my-app.demo.svc.cluster.local:8080/api; echo; sleep 1; done'
 
 status:
 	kubectl argo rollouts get rollout $(ROLLOUT_NAME) -n $(NAMESPACE) --watch
 
 dashboard:
 	kubectl argo rollouts dashboard &
-	open http://localhost:3100 2>/dev/null || true
+	sleep 2
+	open http://localhost:3100/rollouts 2>/dev/null || true
 
