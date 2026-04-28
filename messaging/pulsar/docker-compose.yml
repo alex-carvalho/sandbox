@@ -13,7 +13,27 @@ services:
       - pulsar_data:/pulsar/data
       - pulsar_conf:/pulsar/conf
     restart: unless-stopped
+    networks:
+      - pulsar-net
+
+  dekaf:
+    image: visortelle/dekaf:1.1.0
+    restart: always
+    environment:
+      DEKAF_PULSAR_WEB_URL: "http://pulsar:8080"
+      DEKAF_PULSAR_BROKER_URL: "pulsar://pulsar:6650"
+    volumes:
+      - dekaf-library:/dekaf/data/library
+    ports:
+      - "8090:8090"
+    networks:
+      - pulsar-net
 
 volumes:
   pulsar_data:
   pulsar_conf:
+  dekaf-library:
+
+networks:
+  pulsar-net:
+    driver: bridge
