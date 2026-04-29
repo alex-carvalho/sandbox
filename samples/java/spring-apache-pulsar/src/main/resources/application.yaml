@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: pulsar
+  pulsar:
+    admin:
+      service-url: ${PULSAR_ADMIN_SERVICE_URL:http://localhost:8080}
+    client:
+      service-url: ${PULSAR_SERVICE_URL:pulsar://localhost:6650}
+
+app:
+  pulsar:
+    topics:
+      orders: orders
+      payment: payment
+    subscriptions:
+      orders-to-payment: orders-to-payment
+
+server:
+  port: 8081
