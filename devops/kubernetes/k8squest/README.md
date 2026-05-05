@@ -97,3 +97,33 @@ k get rs
 k rollout status deployment/web-app
 k rollout undo deployment/web-app
 ```
+
+10 -  Pods keep restarting because the liveness probe is checking the wrong endpoint   
+Fix the liveness probe configuration so pods stay running    
+
+```shell
+k edit  deploy api-server 
+# update the liveness url removing the path
+```
+
+11 -  Pods receive traffic before they're ready, causing 502 errors for                                                                     ║
+Add a readiness probe to prevent traffic from hitting pods too early 
+
+```shell
+k edit deployment slow-startup-app
+readinessProbe:
+  httpGet:
+    path: /
+    port: 80
+  initialDelaySeconds: 22  # add sleep greater than sleep on start
+  periodSeconds: 5
+  successThreshold: 1
+```
+
+12 - HorizontalPodAutoscaler fails to scale pods due to missing metrics
+Install metrics-server so HPA can read CPU/memory metrics and scale  
+```shell
+k apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+# enable insecure tls flag
+k patch deployment metrics-server -n kube-system --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
+```
