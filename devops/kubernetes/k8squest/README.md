@@ -127,3 +127,10 @@ k apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/dow
 # enable insecure tls flag
 k patch deployment metrics-server -n kube-system --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
 ```
+
+13 - Rolling update with maxUnavailable: 100% causes complete service 
+Fix the rollout strategy to prevent all pods from being down simultaneously     
+```shell
+k edit deploy critical-api
+# update maxUnavailable to 0 and maxSurge to 1
+```
