@@ -134,3 +134,11 @@ Fix the rollout strategy to prevent all pods from being down simultaneously
 k edit deploy critical-api
 # update maxUnavailable to 0 and maxSurge to 1
 ```
+
+ 14 - PodDisruptionBudget is too restrictive, preventing node drains and updates 
+ Fix the PDB to allow safe pod evictions while maintaining availability   
+ ```shell
+ k get pdb db-proxy-pdb  -o yaml
+ # update the minAvailable value to allow safe pod evictions
+ k patch pdb db-proxy-pdb --type='json' -p='[{"op": "replace", "path": "/spec/minAvailable", "value": 1}]'
+ ```
