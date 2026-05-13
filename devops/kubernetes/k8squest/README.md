@@ -99,7 +99,7 @@ k rollout undo deployment/web-app
 ```
 
 10 -  Pods keep restarting because the liveness probe is checking the wrong endpoint   
-Fix the liveness probe configuration so pods stay running    
+- Fix the liveness probe configuration so pods stay running    
 
 ```shell
 k edit  deploy api-server 
@@ -107,7 +107,7 @@ k edit  deploy api-server
 ```
 
 11 -  Pods receive traffic before they're ready, causing 502 errors for                                                                     ║
-Add a readiness probe to prevent traffic from hitting pods too early 
+- Add a readiness probe to prevent traffic from hitting pods too early 
 
 ```shell
 k edit deployment slow-startup-app
@@ -121,7 +121,7 @@ readinessProbe:
 ```
 
 12 - HorizontalPodAutoscaler fails to scale pods due to missing metrics
-Install metrics-server so HPA can read CPU/memory metrics and scale  
+- Install metrics-server so HPA can read CPU/memory metrics and scale  
 ```shell
 k apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
 # enable insecure tls flag
@@ -129,16 +129,77 @@ k patch deployment metrics-server -n kube-system --type='json' -p='[{"op": "add"
 ```
 
 13 - Rolling update with maxUnavailable: 100% causes complete service 
-Fix the rollout strategy to prevent all pods from being down simultaneously     
+- Fix the rollout strategy to prevent all pods from being down simultaneously     
 ```shell
 k edit deploy critical-api
 # update maxUnavailable to 0 and maxSurge to 1
 ```
 
  14 - PodDisruptionBudget is too restrictive, preventing node drains and updates 
- Fix the PDB to allow safe pod evictions while maintaining availability   
+ - Fix the PDB to allow safe pod evictions while maintaining availability   
  ```shell
  k get pdb db-proxy-pdb  -o yaml
  # update the minAvailable value to allow safe pod evictions
  k patch pdb db-proxy-pdb --type='json' -p='[{"op": "replace", "path": "/spec/minAvailable", "value": 1}]'
  ```
+
+15 - Service is pointing to the old version, users don't see the new deployment
+- Update the service selector to route traffic to the new blue-green deployment
+```shell
+k get service app-service -o yaml
+k patch service app-service  -p '{"spec":{"selector":{"version":"green"}}}'
+```
+
+16 - Canary deployment has wrong replica ratios, making testing
+- Fix the replica counts to achieve proper 90/10 traffic split for canary testing     
+```shell
+k scale deployment app-stable --replicas=9
+k scale deployment app-canary --replicas=1
+```
+
+17 - Using Deployment for a database causes data loss and pod identity issues                                                                                                                                 ║
+- Convert the Deployment to a StatefulSet to provide stable pod identities and persistent storage  
+```shell
+k delete deployment database
+k apply -f - <<EOF
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: database
+  namespace: k8squest
+spec:
+  serviceName: "database-service"  # Important!
+  replicas: 3
+  selector:
+    matchLabels:
+      app: database
+  template:
+    metadata:
+      labels:
+        app: database
+    spec:
+      containers:
+      - name: db
+        image: hashicorp/http-echo:latest
+        args:
+          - "-text=Database Pod"
+          - "-listen=:8080"
+        ports:
+        - containerPort: 8080
+EOF
+
+```
+
+18 - Manual ReplicaSet makes updates difficult and breaks automation
+- Convert the standalone ReplicaSet to a Deployment for better management
+```shell
+kubectl get rs web-app-rs -o yaml \
+| sed 's/kind: ReplicaSet/kind: Deployment/' \
+| sed 's/name: web-app-rs/name: web-app/' \
+| sed 's/image: hashicorp/http-echo:0.2.3/image: hashicorp/http-echo:latest/' \
+| grep -v 'resourceVersion:\|uid:\|selfLink:\|creationTimestamp:\|generation:\|managedFields:\|ownerReferences:\|fullyLabeledReplicas:' \
+> deployment.yaml
+k delete replicaset web-app-rs
+k apply -f deployment.yaml
+
+```
