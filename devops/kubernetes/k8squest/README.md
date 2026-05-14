@@ -203,3 +203,26 @@ k delete replicaset web-app-rs
 k apply -f deployment.yaml
 
 ```
+
+19 - A service exists but pods aren't receiving traffic
+- Fix the service so it routes traffic to the backend pods
+```shell
+k get service backend-service -o yaml
+k patch service backend-service  -p '{"spec":{"selector":{"app":"backend"}}}'
+```
+
+20 - NodePort service created but can't access from outside cluster
+- Fix the NodePort service configuration to enable external access
+```shell
+k get svc web-nodeport -o yaml   
+k patch svc web-nodeport --type='json' -p='[{"op": "replace", "path": "/spec/ports/0/nodePort", "value": 30080}]'
+```
+
+21 - Pods can't resolve service names via DNS
+- Fix DNS configuration so pods can resolve service names
+```shell
+k logs app-client
+kubectl get pod app-client -o yaml \
+| sed 's/-h database/-h database-service/g' \
+| kubectl replace -f -
+```
