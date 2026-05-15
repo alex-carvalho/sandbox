@@ -224,5 +224,5 @@ k patch svc web-nodeport --type='json' -p='[{"op": "replace", "path": "/spec/por
 k logs app-client
 kubectl get pod app-client -o yaml \
 | sed 's/-h database/-h database-service/g' \
-| kubectl replace -f -
+| kubectl replace --force -f -
 ```
