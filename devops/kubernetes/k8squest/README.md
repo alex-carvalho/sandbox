@@ -226,3 +226,17 @@ kubectl get pod app-client -o yaml \
 | sed 's/-h database/-h database-service/g' \
 | kubectl replace --force -f -
 ```
+
+22 - Ingress created but traffic doesn't reach backend service
+- Fix the Ingress path rules to route traffic correctly 
+```shell
+k get ingress web-ingress -o yaml
+k patch ingress web-ingress --type='json' -p='[{"op": "replace", "path": "/spec/rules/0/http/paths/0/path", "value": "/"}]'  
+```
+
+23 - A NetworkPolicy is blocking legitimate traffic between pods. The frontend can't reach the backend API, even though both pods are running and healthy. You need to identify and fix the overly restrictive network policy
+- Fix the overly restrictive NetworkPolicy to allow frontend-to-backend communication
+```shell
+k get netpol backend-network-policy  -o yaml
+k patch netpol backend-network-policy --type='json' -p='[{"op": "replace", "path": "/spec/ingress/0/from/0/podSelector/matchLabels/app", "value": "frontend"}]'
+```
