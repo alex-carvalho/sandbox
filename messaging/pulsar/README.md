@@ -1,5 +1,11 @@
 # Apache Pulsar
 
+```shell
+docker-compose up
+```
+UI:
+http://localhost:8090/
+
 ## Overview
 Apache Pulsar is a distributed messaging and streaming platform designed for high-performance, scalability, and multi-tenant environments. It is often used for real-time data pipelines, event-driven architectures, and message queuing systems.
 

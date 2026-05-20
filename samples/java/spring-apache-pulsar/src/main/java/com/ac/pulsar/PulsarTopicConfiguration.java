@@ -3,6 +3,7 @@ package com.ac.pulsar;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.pulsar.core.PulsarClientBuilderCustomizer;
 import org.springframework.pulsar.core.PulsarTopic;
 import org.springframework.pulsar.core.PulsarTopicBuilder;
 
@@ -19,6 +20,11 @@ class PulsarTopicConfiguration {
         return topicBuilder.name(paymentTopic)
                 .numberOfPartitions(3)
                 .build();
+    }
+
+    @Bean
+    PulsarClientBuilderCustomizer pulsarClientBuilderCustomizer() {
+        return builder -> builder.listenerName("external");
     }
 
 }
