@@ -7,8 +7,8 @@ import org.slf4j.LoggerFactory;
 
 import static com.ac.pulsar.Config.*;
 
-public class PulsarConsumer {
-    private static final Logger log = LoggerFactory.getLogger(PulsarConsumer.class);
+public class UserConsumer {
+    private static final Logger log = LoggerFactory.getLogger(UserConsumer.class);
     private static final String SUBSCRIPTION_NAME = "user-updates-subscription";
 
     static void main() {
@@ -16,7 +16,6 @@ public class PulsarConsumer {
 
         try (PulsarClient client = PulsarClient.builder()
                 .serviceUrl(PULSAR_SERVICE_URL)
-                .listenerName("external")
                 .build();
 
              Consumer<UserMessage> consumer = client.newConsumer(Schema.JSON(UserMessage.class))
@@ -24,14 +23,17 @@ public class PulsarConsumer {
                  .consumerName("java-PulsarConsumer")
                 .subscriptionName(SUBSCRIPTION_NAME)
                 .subscriptionType(SubscriptionType.Exclusive)
+//                .subscriptionType(SubscriptionType.Key_Shared)
+//                .subscriptionType(SubscriptionType.Shared)
+//                     .deadLetterPolicy()
                 .subscribe()) {
 
             while (!Thread.currentThread().isInterrupted()) {
                 Message<UserMessage> msg = consumer.receive();
                 try {
                     UserMessage value = msg.getValue();
-                    log.info("SUCCESS: Received message! ID: {}, Name: {}, Email: {}, Timestamp: {}",
-                            value.id(), value.name(), value.email(), value.timestamp());
+                    log.info("ID: {}, Name: {}, Timestamp: {}",
+                            value.id(), value.name(), value.timestamp());
                     consumer.acknowledge(msg);
                 } catch (Exception e) {
                     log.error("Failed to process message: {}", msg.getMessageId(), e);

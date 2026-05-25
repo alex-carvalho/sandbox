@@ -7,10 +7,13 @@ services:
       bin/pulsar standalone"
     ports:
       - "6650:6650"
+      - "6651:6651"
       - "8080:8080"
     environment:
       PULSAR_MEM: "-Xms512m -Xmx512m -XX:MaxDirectMemorySize=1g"
-      PULSAR_PREFIX_advertisedListeners: "internal:pulsar://pulsar:6650,external:pulsar://localhost:6650"
+      PULSAR_PREFIX_brokerServicePort: ""
+      PULSAR_PREFIX_advertisedListeners: "internal:pulsar://pulsar:6650,external:pulsar://localhost:6651"
+      PULSAR_PREFIX_bindAddresses: "internal:pulsar://0.0.0.0:6650,external:pulsar://0.0.0.0:6651"
       PULSAR_PREFIX_internalListenerName: "internal"
     volumes:
       - pulsar_data:/pulsar/data

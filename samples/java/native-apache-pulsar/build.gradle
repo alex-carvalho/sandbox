@@ -9,6 +9,7 @@ repositories {
 
 dependencies {
     implementation 'org.apache.pulsar:pulsar-client:3.3.0'
+    compileOnly 'org.apache.pulsar:pulsar-functions-api:3.3.0'
     implementation 'org.slf4j:slf4j-api:2.0.13'
     implementation 'ch.qos.logback:logback-classic:1.5.6'
 }
@@ -19,12 +20,17 @@ java {
     }
 }
 
-tasks.register('runProducer', JavaExec) {
-    mainClass = 'com.example.pulsar.PulsarProducer'
+tasks.register('runUserConsumer', JavaExec) {
+    mainClass = 'com.ac.pulsar.UserConsumer'
     classpath = sourceSets.main.runtimeClasspath
 }
 
-tasks.register('runConsumer', JavaExec) {
-    mainClass = 'com.example.pulsar.PulsarConsumer'
+tasks.register('runUserWithEmailConsumer', JavaExec) {
+    mainClass = 'com.ac.pulsar.functions.UserWithEmailConsumer'
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+tasks.register('runUserProducer', JavaExec) {
+    mainClass = 'com.ac.pulsar.UserProducer'
     classpath = sourceSets.main.runtimeClasspath
 }

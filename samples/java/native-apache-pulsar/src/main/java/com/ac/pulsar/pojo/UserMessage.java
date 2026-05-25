@@ -1,4 +1,4 @@
 package com.ac.pulsar.pojo;
 
-public record UserMessage(String id, String name, String email, long timestamp) {
+public record UserMessage(Integer id, String name, long timestamp) {
 }
