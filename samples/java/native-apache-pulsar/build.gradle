@@ -8,10 +8,10 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.apache.pulsar:pulsar-client:3.3.0'
-    compileOnly 'org.apache.pulsar:pulsar-functions-api:3.3.0'
+    implementation 'org.apache.pulsar:pulsar-client:4.2.1'
+    compileOnly 'org.apache.pulsar:pulsar-functions-api:4.2.1'
     implementation 'org.slf4j:slf4j-api:2.0.13'
-    implementation 'ch.qos.logback:logback-classic:1.5.6'
+    implementation 'ch.qos.logback:logback-classic:1.5.32'
 }
 
 java {
@@ -32,5 +32,20 @@ tasks.register('runUserWithEmailConsumer', JavaExec) {
 
 tasks.register('runUserProducer', JavaExec) {
     mainClass = 'com.ac.pulsar.UserProducer'
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+tasks.register('runOrderProducer', JavaExec) {
+    mainClass = 'com.ac.pulsar.dlq.OrderProducer'
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+tasks.register('runOrderConsumer', JavaExec) {
+    mainClass = 'com.ac.pulsar.dlq.OrderConsumer'
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+tasks.register('runOrderDLQConsumer', JavaExec) {
+    mainClass = 'com.ac.pulsar.dlq.OrderDLQConsumer'
     classpath = sourceSets.main.runtimeClasspath
 }

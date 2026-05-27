@@ -25,7 +25,6 @@ public class UserConsumer {
                 .subscriptionType(SubscriptionType.Exclusive)
 //                .subscriptionType(SubscriptionType.Key_Shared)
 //                .subscriptionType(SubscriptionType.Shared)
-//                     .deadLetterPolicy()
                 .subscribe()) {
 
             while (!Thread.currentThread().isInterrupted()) {
