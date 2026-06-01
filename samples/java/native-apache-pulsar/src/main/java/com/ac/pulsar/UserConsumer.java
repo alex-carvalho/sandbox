@@ -22,9 +22,10 @@ public class UserConsumer {
                 .topic(TOPIC_USER_UPDATES)
                  .consumerName("java-PulsarConsumer")
                 .subscriptionName(SUBSCRIPTION_NAME)
-                .subscriptionType(SubscriptionType.Exclusive)
-//                .subscriptionType(SubscriptionType.Key_Shared)
-//                .subscriptionType(SubscriptionType.Shared)
+                .subscriptionType(SubscriptionType.Exclusive)    // only one instance at time, next consumer throw error
+//                .subscriptionType(SubscriptionType.Failover)   // only one at time, next keep waiting for Failover
+//                .subscriptionType(SubscriptionType.Key_Shared) // multiple consumers keep ordering by key
+//                .subscriptionType(SubscriptionType.Shared)     // how many consumers needed in parallel
                 .subscribe()) {
 
             while (!Thread.currentThread().isInterrupted()) {
