@@ -240,3 +240,24 @@ k patch ingress web-ingress --type='json' -p='[{"op": "replace", "path": "/spec/
 k get netpol backend-network-policy  -o yaml
 k patch netpol backend-network-policy --type='json' -p='[{"op": "replace", "path": "/spec/ingress/0/from/0/podSelector/matchLabels/app", "value": "frontend"}]'
 ```
+
+24 - A stateful application is randomly losing user sessions. Users log in successfully but their subsequent requests show them as logged out. The issue is that the Service is load-balancing requests across multiple pods, and session data isn't shared between them. You need to enable session affinity to fix this.
+- Configure sessionAffinity on the Service to maintain user sessions
+```shell
+k patch service session-service --type='json' -p='[{"op": "replace", "path": "/spec/sessionAffinity", "value": "ClientIP"}]'
+```
+
+25 - Mission: A frontend application in the 'k8squest' namespace needs to call an API in the 'backend-ns' namespace, but it can't connect. The issue is using a short service name instead of the fully-qualified domain name (FQDN). You need to fix the DNS name to enable cross-namespace communication.
+- Fix cross-namespace service communication using proper DNS FQDN
+```shell
+k get pod frontend-app -o yaml \
+| sed 's/api-service/api-service.backend-ns/g' \
+| kubectl replace --force -f -
+```
+
+26 - A service's endpoints aren't updating when pods restart or become unhealthy. Traffic continues routing to broken pods, causing errors. The issue is missing readiness probes—Kubernetes doesn't know when pods are actually ready to serve traffic. You need to add readiness probes to fix this.
+- Add readiness probes so Service endpoints update correctly
+```shell
+k edit pod web-app-1
+kubectl replace --force -f ....teporary file
+```
