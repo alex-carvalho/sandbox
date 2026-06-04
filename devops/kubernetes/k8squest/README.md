@@ -261,3 +261,29 @@ k get pod frontend-app -o yaml \
 k edit pod web-app-1
 kubectl replace --force -f ....teporary file
 ```
+
+29 - Your team deployed a service with type LoadBalancer, but it's been stuck in "Pending" state for 10 minutes. External clients can't access the application. The service works fine in the cloud environment, but your local development cluster can't provision the LoadBalancer. You need to understand the difference between service types and choose the right one for local development.                      ║
+- Fix the broken resources and make the validation pass
+```shell
+kubectl patch svc web-service \
+  --type=merge \
+  -p '{
+    "spec":{
+      "type":"NodePort",
+      "ports":[
+        {
+          "port":80,
+          "targetPort":80
+        }
+      ]
+    }
+  }'
+```
+
+30 - Your StatefulSet pods can't communicate with each other using predictable DNS names. The application expects to reach individual pods at pod-0.service-name, pod-1.service-name, but DNS resolution isn't working. The service is configured with a ClusterIP, but StatefulSets require a special type of service called a "headless service" for direct pod-to-pod DNS resolution.
+- Fix the broken resources and make the validation pass, make web-cluster a headless service, ClusterIP: None
+```shell
+k get svc web-cluster -o yaml > /tmp/svc.yaml 
+vi /tmp/svc.yaml 
+k replace --force -f /tmp/svc.yaml
+```
