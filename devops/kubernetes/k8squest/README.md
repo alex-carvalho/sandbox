@@ -287,3 +287,11 @@ k get svc web-cluster -o yaml > /tmp/svc.yaml
 vi /tmp/svc.yaml 
 k replace --force -f /tmp/svc.yaml
 ```
+
+31 - Your application pod is stuck in ContainerCreating state because its PersistentVolumeClaim is in Pending status. The pod needs persistent storage to save database files, but the storage isn't being provisioned. You need to investigate why the PVC can't bind to a PersistentVolume and fix the storage configuration.
+- Fix the broken resources and make the validation pass
+```shell
+k get pvc app-storage-claim -o yaml
+kubectl patch pv app-storage \
+  -p '{"spec":{"capacity":{"storage":"5Gi"},"storageClassName":"fast"}}'
+```
