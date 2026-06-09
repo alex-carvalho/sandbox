@@ -295,3 +295,10 @@ k get pvc app-storage-claim -o yaml
 kubectl patch pv app-storage \
   -p '{"spec":{"capacity":{"storage":"5Gi"},"storageClassName":"fast"}}'
 ```
+
+32 - Your application pod is crashing with errors about missing files. The pod expects to read configuration from /app/config, but the volume is mounted at the wrong path. You need to fix the volumeMount configuration to mount the storage at the correct location so the application can find its config files.                                                                                                         Fix the broken resources and make the validation pass
+```shell  
+k get pod web-app  -o yaml > pod.yaml
+vi pod.yaml # remove status part ( :/^status:/,$d) and annotations, fix volumeMount path to /app/config
+k replace --force -f pod.yaml
+```
