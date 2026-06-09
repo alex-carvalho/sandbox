@@ -44,3 +44,5 @@ terraform.tfstate.backup
 poc-*-cluster-config
 
 **/__pycache__/*
+
+.antigravitycli
