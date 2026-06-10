@@ -296,9 +296,14 @@ kubectl patch pv app-storage \
   -p '{"spec":{"capacity":{"storage":"5Gi"},"storageClassName":"fast"}}'
 ```
 
-32 - Your application pod is crashing with errors about missing files. The pod expects to read configuration from /app/config, but the volume is mounted at the wrong path. You need to fix the volumeMount configuration to mount the storage at the correct location so the application can find its config files.                                                                                                         Fix the broken resources and make the validation pass
+32 - Your application pod is crashing with errors about missing files. The pod expects to read configuration from /app/config, but the volume is mounted at the wrong path. You need to fix the volumeMount configuration to mount the storage at the correct location so the application can find its config files.
+Fix the broken resources and make the validation pass
 ```shell  
 k get pod web-app  -o yaml > pod.yaml
 vi pod.yaml # remove status part ( :/^status:/,$d) and annotations, fix volumeMount path to /app/config
 k replace --force -f pod.yaml
 ```
+
+33 - Multiple pods need to share the same storage volume across nodes, but the storage is configured with ReadWriteOnce instead of ReadWriteMany. This level runs on Kind (single-node), so all 3 pods will appear to work. However, the configuration is WRONG for production multi-node clusters. The validation will detect this, and you'll also learn that PVC specs are immutable when you try to fix it
+This teaches TWO lessons: (1) correct access mode selection, (2) PVC immutability.
+Fix the broken resources and make the validation pass
