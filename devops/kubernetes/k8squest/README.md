@@ -307,3 +307,12 @@ k replace --force -f pod.yaml
 33 - Multiple pods need to share the same storage volume across nodes, but the storage is configured with ReadWriteOnce instead of ReadWriteMany. This level runs on Kind (single-node), so all 3 pods will appear to work. However, the configuration is WRONG for production multi-node clusters. The validation will detect this, and you'll also learn that PVC specs are immutable when you try to fix it
 This teaches TWO lessons: (1) correct access mode selection, (2) PVC immutability.
 Fix the broken resources and make the validation pass
+```shell
+
+k get pvc shared-pvc -o yaml > /tmp/pvc.yaml
+vi /tmp/pvc.yaml # change access mode to ReadWriteMany
+k replace --force -f /tmp/pvc.yaml
+k get pv shared-storage -o yaml > /tmp/pv.yaml
+vi /tmp/pv.yaml # change access mode to ReadWriteMany
+k replace --force -f /tmp/pv.yaml
+```
