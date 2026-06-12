@@ -316,3 +316,23 @@ k get pv shared-storage -o yaml > /tmp/pv.yaml
 vi /tmp/pv.yaml # change access mode to ReadWriteMany
 k replace --force -f /tmp/pv.yaml
 ```
+
+34 - A StatefulSet for a database cluster has all pods writing to the same PVC! Each pod should have its own dedicated storage, but they're all sharing one volume. This is causing data corruption and conflicts. 
+- Fix the broken resources and make the validation pass
+```shell
+k get pvc
+k get sts postgres-cluster -o yaml > sts.yaml
+vi sts.yaml
+# add to spec of statefulset and remove pod level volumeClaimRef
+volumeClaimTemplates:
+- metadata:
+    name: database-storage
+  spec:
+    accessModes: [ReadWriteOnce]
+    resources:
+      requests:
+        storage: 5Gi
+    storageClassName: standard
+
+k replace --force -f sts.yaml
+```
