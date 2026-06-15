@@ -336,3 +336,12 @@ volumeClaimTemplates:
 
 k replace --force -f sts.yaml
 ```
+
+35 - A PVC has been sitting in Pending state for hours. The pod can't start because it's waiting for storage. The PVC references a StorageClass that doesn't exist!
+- Fix the broken resources and make the validation pass
+```shell
+k get pvc -o wide
+k get pv app-storage -o yaml > /tmp/pv.yaml
+vi /tmp/pv.yaml # change storageClassName to standard
+k replace --force -f /tmp/pv.yaml
+```
