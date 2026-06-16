@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: simple
+
+  ai:
+    openai:
+      base-url: http://localhost:1234/v1
+      api-key: "lm-studio"
+      chat:
+        options:
+          model: nvidia/nemotron-3-nano-4b
+          temperature: 0.7
+          stream-usage: true
