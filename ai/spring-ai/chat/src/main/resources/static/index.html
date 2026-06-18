@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local Chat</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --panel-soft: #eef1f5;
+      --text: #171a1f;
+      --muted: #687180;
+      --line: #d9dee7;
+      --accent: #2563eb;
+      --accent-strong: #1d4ed8;
+      --assistant: #ffffff;
+      --user: #e9f7ef;
+      --danger: #b42318;
+      --shadow: 0 16px 40px rgba(20, 28, 38, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      height: 100vh;
+      border-right: 1px solid var(--line);
+      background: #111827;
+      color: #f8fafc;
+    }
+
+    .sidebar-header {
+      padding: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .new-chat {
+      width: 100%;
+      min-height: 42px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: white;
+      font-weight: 700;
+    }
+
+    .new-chat:hover {
+      background: var(--accent-strong);
+    }
+
+    .sessions {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: 8px;
+      overflow: auto;
+      padding: 12px;
+    }
+
+    .session-button {
+      width: 100%;
+      min-height: 54px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: transparent;
+      color: #e5e7eb;
+      text-align: left;
+    }
+
+    .session-button:hover,
+    .session-button.active {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .session-title {
+      display: block;
+      overflow: hidden;
+      font-weight: 650;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .session-meta {
+      display: block;
+      margin-top: 2px;
+      color: #9ca3af;
+      font-size: 12px;
+    }
+
+    .empty-list {
+      margin: 10px 8px;
+      color: #9ca3af;
+      font-size: 14px;
+    }
+
+    .main {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      min-width: 0;
+      min-height: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 70px;
+      padding: 14px 22px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.86);
+      backdrop-filter: blur(10px);
+    }
+
+    .chat-heading {
+      min-width: 0;
+    }
+
+    .chat-heading h2 {
+      overflow: hidden;
+      margin: 0;
+      font-size: 18px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .status {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .messages {
+      min-height: 0;
+      overflow: auto;
+      padding: 24px;
+    }
+
+    .message-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-width: 920px;
+      margin: 0 auto;
+    }
+
+    .message {
+      display: grid;
+      gap: 5px;
+      max-width: min(760px, 100%);
+    }
+
+    .message.user {
+      align-self: flex-end;
+    }
+
+    .message.assistant {
+      align-self: flex-start;
+    }
+
+    .message-author {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .message.user .message-author {
+      text-align: right;
+    }
+
+    .bubble {
+      min-width: 0;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--assistant);
+      box-shadow: 0 8px 18px rgba(20, 28, 38, 0.04);
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .message.user .bubble {
+      border-color: #c6ead5;
+      background: var(--user);
+    }
+
+    .composer-wrap {
+      padding: 16px 24px 22px;
+      border-top: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .composer {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      max-width: 920px;
+      margin: 0 auto;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 48px;
+      max-height: 180px;
+      resize: vertical;
+      padding: 12px 13px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+      color: var(--text);
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+    }
+
+    .send {
+      min-width: 104px;
+      min-height: 48px;
+      border-radius: 8px;
+      background: var(--text);
+      color: white;
+      font-weight: 700;
+    }
+
+    .send:hover {
+      background: #000000;
+    }
+
+    .send:disabled,
+    .new-chat:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .placeholder {
+      display: grid;
+      min-height: 100%;
+      place-items: center;
+      padding: 32px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .placeholder strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text);
+      font-size: 20px;
+    }
+
+    .error {
+      color: var(--danger);
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        height: auto;
+        max-height: 260px;
+        border-right: 0;
+      }
+
+      .sessions {
+        max-height: 190px;
+      }
+
+      .main {
+        height: calc(100vh - 260px);
+      }
+
+      .composer {
+        grid-template-columns: 1fr;
+      }
+
+      .send {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <h1>Spring AI Chat</h1>
+        </div>
+        <button id="newChat" class="new-chat" type="button">New chat</button>
+      </div>
+      <div id="sessions" class="sessions" aria-label="Chats"></div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="chat-heading">
+          <h2 id="chatTitle">New chat</h2>
+          <div id="status" class="status">Ready</div>
+        </div>
+      </header>
+
+      <section id="messages" class="messages" aria-live="polite">
+        <div id="messageList" class="message-list"></div>
+      </section>
+
+      <form id="composer" class="composer-wrap">
+        <div class="composer">
+          <textarea id="prompt" rows="2" placeholder="Type your message"></textarea>
+          <button id="send" class="send" type="submit">Send</button>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <script>
+    const state = {
+      sessions: [],
+      currentSessionId: null,
+      currentMessages: [],
+      sending: false
+    };
+
+    const els = {
+      sessions: document.querySelector("#sessions"),
+      messageList: document.querySelector("#messageList"),
+      messages: document.querySelector("#messages"),
+      chatTitle: document.querySelector("#chatTitle"),
+      status: document.querySelector("#status"),
+      prompt: document.querySelector("#prompt"),
+      send: document.querySelector("#send"),
+      newChat: document.querySelector("#newChat"),
+      composer: document.querySelector("#composer")
+    };
+
+    function labelForSession(session) {
+      if (session.title && session.title.trim()) {
+        return session.title.trim();
+      }
+
+      const firstUserMessage = (session.messages || []).find((message) => message.author === "USER");
+      if (firstUserMessage && firstUserMessage.content) {
+        return firstUserMessage.content.slice(0, 42);
+      }
+
+      return `Chat ${session.id}`;
+    }
+
+    function formatDate(value) {
+      if (!value) {
+        return "";
+      }
+
+      return new Intl.DateTimeFormat("en", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      }).format(new Date(value));
+    }
+
+    function setStatus(text, isError = false) {
+      els.status.textContent = text;
+      els.status.classList.toggle("error", isError);
+    }
+
+    function setSending(isSending) {
+      state.sending = isSending;
+      els.send.disabled = isSending;
+      els.newChat.disabled = isSending;
+      els.prompt.disabled = isSending;
+      els.send.textContent = isSending ? "Sending" : "Send";
+    }
+
+    function renderSessions() {
+      if (!state.sessions.length) {
+        els.sessions.innerHTML = '<div class="empty-list">No chats yet.</div>';
+        return;
+      }
+
+      els.sessions.innerHTML = "";
+      state.sessions.forEach((session) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "session-button";
+        button.classList.toggle("active", session.id === state.currentSessionId);
+        button.dataset.id = session.id;
+        button.innerHTML = `
+          <span class="session-title"></span>
+          <span class="session-meta"></span>
+        `;
+        button.querySelector(".session-title").textContent = labelForSession(session);
+        button.querySelector(".session-meta").textContent = formatDate(session.createdAt);
+        button.addEventListener("click", () => openSession(session.id));
+        els.sessions.appendChild(button);
+      });
+    }
+
+    function renderMessages() {
+      els.messageList.innerHTML = "";
+
+      if (!state.currentMessages.length) {
+        els.messageList.innerHTML = `
+          <div class="placeholder">
+            <div>
+              <strong>Start a conversation</strong>
+              Send a message to chat with your local model.
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      state.currentMessages.forEach((message) => appendMessage(message.author, message.content));
+      scrollToBottom();
+    }
+
+    function appendMessage(author, content) {
+      const isUser = author === "USER";
+      const message = document.createElement("article");
+      message.className = `message ${isUser ? "user" : "assistant"}`;
+      message.innerHTML = `
+        <div class="message-author">${isUser ? "You" : "Assistant"}</div>
+        <div class="bubble"></div>
+      `;
+      message.querySelector(".bubble").textContent = content || "";
+      els.messageList.appendChild(message);
+      scrollToBottom();
+      return message.querySelector(".bubble");
+    }
+
+    function scrollToBottom() {
+      els.messages.scrollTop = els.messages.scrollHeight;
+    }
+
+    async function loadSessions() {
+      const response = await fetch("/sessions");
+      if (!response.ok) {
+        throw new Error("Could not load chats.");
+      }
+
+      const sessions = await response.json();
+      state.sessions = sessions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      renderSessions();
+      return state.sessions;
+    }
+
+    async function openSession(id) {
+      setStatus("Loading chat");
+      const response = await fetch(`/sessions/${id}`);
+      if (!response.ok) {
+        setStatus("Chat not found.", true);
+        return;
+      }
+
+      const session = await response.json();
+      state.currentSessionId = session.id;
+      state.currentMessages = session.messages || [];
+      els.chatTitle.textContent = labelForSession(session);
+      renderSessions();
+      renderMessages();
+      setStatus("Ready");
+    }
+
+    function startNewChat() {
+      state.currentSessionId = null;
+      state.currentMessages = [];
+      els.chatTitle.textContent = "New chat";
+      els.prompt.value = "";
+      renderSessions();
+      renderMessages();
+      setStatus("Ready");
+      els.prompt.focus();
+    }
+
+    function readEventStreamChunk(buffer, onData) {
+      const events = buffer.split("\n\n");
+      const rest = events.pop() || "";
+
+      for (const event of events) {
+        const dataLines = event
+          .split("\n")
+          .filter((line) => line.startsWith("data:"));
+
+        if (dataLines.length) {
+          const data = dataLines
+            .map((line) => line.slice(5))
+            .join("\n");
+          onData(data);
+        }
+      }
+
+      return rest;
+    }
+
+    async function sendPrompt(prompt) {
+      const wasNewChat = state.currentSessionId == null;
+
+      state.currentMessages.push({ author: "USER", content: prompt });
+      renderMessages();
+      const assistantBubble = appendMessage("LLM", "");
+
+      const response = await fetch("/chat/stream", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "text/event-stream"
+        },
+        body: JSON.stringify({
+          prompt,
+          conversationId: state.currentSessionId
+        })
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error("Failed to send message.");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) {
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        buffer = readEventStreamChunk(buffer, (data) => {
+          assistantBubble.textContent += data;
+        });
+      }
+
+      buffer += decoder.decode();
+      readEventStreamChunk(buffer + "\n\n", (data) => {
+        assistantBubble.textContent += data;
+      });
+
+      const sessions = await loadSessions();
+      if (wasNewChat && sessions.length) {
+        await openSession(sessions[0].id);
+      } else if (state.currentSessionId != null) {
+        await openSession(state.currentSessionId);
+      }
+    }
+
+    els.composer.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const prompt = els.prompt.value.trim();
+      if (!prompt || state.sending) {
+        return;
+      }
+
+      els.prompt.value = "";
+      setSending(true);
+      setStatus("Generating response");
+
+      try {
+        await sendPrompt(prompt);
+        setStatus("Ready");
+      } catch (error) {
+        setStatus(error.message || "Error while chatting with the model.", true);
+      } finally {
+        setSending(false);
+        els.prompt.focus();
+      }
+    });
+
+    els.prompt.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        els.composer.requestSubmit();
+      }
+    });
+
+    els.newChat.addEventListener("click", startNewChat);
+
+    loadSessions()
+      .then((sessions) => {
+        if (sessions.length) {
+          return openSession(sessions[0].id);
+        }
+
+        startNewChat();
+      })
+      .catch((error) => {
+        renderMessages();
+        setStatus(error.message || "Failed to start.", true);
+      });
+  </script>
+</body>
+</html>

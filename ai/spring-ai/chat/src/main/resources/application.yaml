@@ -1,11 +1,13 @@
 spring:
   application:
-    name: simple
+    name: chat
 
   ai:
     openai:
       base-url: http://localhost:1234/v1
       api-key: "lm-studio"
+      timeout: 10m
+      max-retries: 0
       chat:
         options:
           model: nvidia/nemotron-3-nano-4b
