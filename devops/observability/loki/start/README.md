@@ -59,3 +59,15 @@ Loki use wal to make sure not loose any log data. How to see wal content:
 ```bash
 cd wal-reader && go mod tidy && go run main.go ../loki-data/wal/00000000
 ```
+
+Read chunks via `chunk-reader`:
+```bash
+cd chunk-reader && go mod tidy && go run main.go ../loki-data/chunks/
+```
+
+Read index via `index-reader`:
+```bash
+cd index-reader && go mod tidy && go run main.go ../loki-data/chunks/index/index_20630/fake/1782477188031636882-compactor-1782474845000-1782476669000-bcf53d3a.tsdb.gz
+```
+
+TODO: structured metadata
