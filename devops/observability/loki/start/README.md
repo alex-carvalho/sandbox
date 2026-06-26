@@ -53,3 +53,9 @@ We have provided a helper script `./query-log.sh` to query Loki:
 # Run custom LogQL query
 ./query-log.sh '{job="myapp"} |~ "(?i)error"'
 ```
+
+
+Loki use wal to make sure not loose any log data. How to see wal content:
+```bash
+cd wal-reader && go mod tidy && go run main.go ../loki-data/wal/00000000
+```
