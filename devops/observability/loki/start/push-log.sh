@@ -6,6 +6,10 @@ LOKI_URL="http://localhost:3101"
 JOB=${1:-"bash-test"}
 LEVEL=${2:-"INFO"}
 MESSAGE=${3:-"Hello, Grafana Loki! This is a test log message."}
+# Generate a random 128-bit hex trace ID
+RANDOM_TRACE_ID=$(openssl rand -hex 16 2>/dev/null || od -An -N16 -x /dev/urandom | tr -d ' \n' | head -c32)
+
+STRUCTURED_METADATA=${4:-"{\"trace_id\":\"${RANDOM_TRACE_ID}\"}"}
 
 TIMESTAMP=$(date +%s)000000000
 
@@ -20,7 +24,7 @@ PAYLOAD=$(cat <<EOF
         "source": "shell-script"
       },
       "values": [
-        [ "${TIMESTAMP}", "${MESSAGE}" ]
+        [ "${TIMESTAMP}", "${MESSAGE}", ${STRUCTURED_METADATA} ]
       ]
     }
   ]

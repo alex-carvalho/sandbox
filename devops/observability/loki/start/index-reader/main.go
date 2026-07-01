@@ -9,6 +9,7 @@ import (
 	"hash/crc32"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"time"
 
@@ -28,15 +29,61 @@ func (b realByteSlice) Range(start, end int) []byte {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: go run main.go <tsdb-file-path>")
+		fmt.Println("Usage: go run main.go <tsdb-file-or-directory-path>")
 		os.Exit(1)
 	}
 
-	filePath := os.Args[1]
+	targetPath := os.Args[1]
+	info, err := os.Stat(targetPath)
+	if err != nil {
+		fmt.Printf("❌ Failed to access path %q: %v\n", targetPath, err)
+		os.Exit(1)
+	}
+
+	if info.IsDir() {
+		fmt.Printf("📂 Walking directory recursively: %s\n\n", targetPath)
+		err = filepath.Walk(targetPath, func(path string, fileInfo os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			// Skip directories
+			if fileInfo.IsDir() {
+				return nil
+			}
+			// Skip hidden files
+			if filepath.Base(path)[0] == '.' {
+				return nil
+			}
+			// Check if file is a TSDB index (ends with .tsdb, .gz, etc.)
+			ext := filepath.Ext(path)
+			if ext != ".tsdb" && ext != ".gz" {
+				return nil
+			}
+
+			fmt.Printf("\n##################################################\n")
+			fmt.Printf("📄 Processing TSDB Index File: %s\n", path)
+			fmt.Printf("##################################################\n")
+			if parseErr := parseIndexFile(path); parseErr != nil {
+				fmt.Printf("⚠️  Error parsing %s: %v\n", path, parseErr)
+			}
+			return nil
+		})
+		if err != nil {
+			fmt.Printf("❌ Error walking directory: %v\n", err)
+			os.Exit(1)
+		}
+	} else {
+		if err := parseIndexFile(targetPath); err != nil {
+			fmt.Printf("❌ Error parsing file: %v\n", err)
+			os.Exit(1)
+		}
+	}
+}
+
+func parseIndexFile(filePath string) error {
 	fileBytes, err := os.ReadFile(filePath)
 	if err != nil {
-		fmt.Printf("❌ Failed to read TSDB file: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to read TSDB file: %w", err)
 	}
 
 	// Decompress if gzip compressed
@@ -44,14 +91,12 @@ func main() {
 		fmt.Println("Decompressing gzip-compressed TSDB file...")
 		gz, err := gzip.NewReader(bytes.NewReader(fileBytes))
 		if err != nil {
-			fmt.Printf("❌ Failed to create gzip reader: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("failed to create gzip reader: %w", err)
 		}
 		defer gz.Close()
 		decompressedBytes, err := io.ReadAll(gz)
 		if err != nil {
-			fmt.Printf("❌ Failed to decompress TSDB file: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("failed to decompress TSDB file: %w", err)
 		}
 		fileBytes = decompressedBytes
 	}
@@ -59,8 +104,7 @@ func main() {
 	// Loki TSDB index footer layout (last 68 bytes of uncompressed file)
 	footerSize := 68
 	if len(fileBytes) < footerSize {
-		fmt.Println("❌ Uncompressed file is too small to contain a Loki TSDB index footer.")
-		os.Exit(1)
+		return fmt.Errorf("uncompressed file is too small to contain a Loki TSDB index footer")
 	}
 
 	footerOffset := len(fileBytes) - footerSize
@@ -120,8 +164,7 @@ func main() {
 	// Open Prometheus index reader to read Symbols and Postings
 	r, err := index.NewReader(realByteSlice(synthesizedPromBytes), index.DecodePostingsRaw)
 	if err != nil {
-		fmt.Printf("❌ Failed to create Prometheus index reader: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to create Prometheus index reader: %w", err)
 	}
 	defer r.Close()
 
@@ -144,8 +187,7 @@ func main() {
 	ctx := context.Background()
 	labelNames, err := r.LabelNames(ctx)
 	if err != nil {
-		fmt.Printf("❌ Failed to read label names: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to read label names: %w", err)
 	}
 
 	// Keep track of all unique series reference IDs we find
@@ -256,4 +298,5 @@ func main() {
 	}
 	fmt.Printf("==================================================\n")
 	fmt.Printf("✅ Finished reading TSDB index.\n")
+	return nil
 }

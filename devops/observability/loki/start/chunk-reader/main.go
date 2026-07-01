@@ -230,8 +230,8 @@ func parseChunkFile(filePath string) error {
 	}
 	gz1.Close()
 
-	// Parse labels pool into a slice of strings
-	var labelsPool []string
+	// Parse structured metadata string pool into a slice of strings
+	var metadataStringPool []string
 	poolReader := bytes.NewReader(decLabelsBytes)
 	for poolReader.Len() > 0 {
 		strLen, err := binary.ReadUvarint(poolReader)
@@ -242,15 +242,24 @@ func parseChunkFile(filePath string) error {
 		if _, err := io.ReadFull(poolReader, strBuf); err != nil {
 			break
 		}
-		labelsPool = append(labelsPool, string(strBuf))
+		metadataStringPool = append(metadataStringPool, string(strBuf))
 	}
 
 	fmt.Printf("==================================================\n")
-	fmt.Printf("LOG ENTRIES\n")
+	fmt.Printf("STRUCTURED METADATA STRING POOL\n")
+	fmt.Printf("==================================================\n")
+	for idx, val := range metadataStringPool {
+		fmt.Printf("  Index %d: %q\n", idx, val)
+	}
+	fmt.Println()
+
+	fmt.Printf("==================================================\n")
+	fmt.Printf("LOG ENTRIES (Raw Structure)\n")
 	fmt.Printf("==================================================\n")
 
 	// Decompress and display log entries from all log data blocks
 	for bIdx, b := range blocks {
+		fmt.Printf("--- Block #%d ---\n", bIdx+1)
 		// Gzip stream starts at block offset and runs to the end of data block
 		blockBytes := dataBytes[b.Offset:]
 		gz, err := gzip.NewReader(bytes.NewReader(blockBytes))
@@ -281,47 +290,44 @@ func parseChunkFile(filePath string) error {
 			io.ReadFull(s2Reader, lineBytes)
 
 			metaCount, _ := binary.ReadUvarint(s2Reader)
-			var structuredMeta []string
+
+			fmt.Printf("  [Log Entry #%d]\n", entryIdx)
+			fmt.Printf("    Raw Timestamp (ZigZag): %d (Time: %s)\n", tsZigZag, entryTime.Format("2006-01-02 15:04:05.000000"))
+			fmt.Printf("    Line Length:            %d bytes\n", lineLen)
+			fmt.Printf("    Line Content:           %q\n", string(lineBytes))
+			fmt.Printf("    Meta Count (varints):   %d\n", metaCount)
+
 			if metaCount > 0 {
 				uvarints := make([]uint64, metaCount)
 				for m := uint64(0); m < metaCount; m++ {
 					metaIdx, _ := binary.ReadUvarint(s2Reader)
 					uvarints[m] = metaIdx
 				}
+				fmt.Printf("    Raw Meta Varints:       %v\n", uvarints)
 				numPairs := uvarints[0]
+				fmt.Printf("      ➔ Number of KV Pairs: %d\n", numPairs)
 				for i := uint64(0); i < numPairs; i++ {
 					if 1+2*i+1 < uint64(len(uvarints)) {
 						keyIdx := uvarints[1+2*i]
 						valIdx := uvarints[2+2*i]
 						var key, val string
-						if keyIdx < uint64(len(labelsPool)) {
-							key = labelsPool[keyIdx]
+						if keyIdx < uint64(len(metadataStringPool)) {
+							key = metadataStringPool[keyIdx]
 						} else {
 							key = fmt.Sprintf("<invalid_idx_%d>", keyIdx)
 						}
-						if valIdx < uint64(len(labelsPool)) {
-							val = labelsPool[valIdx]
+						if valIdx < uint64(len(metadataStringPool)) {
+							val = metadataStringPool[valIdx]
 						} else {
 							val = fmt.Sprintf("<invalid_idx_%d>", valIdx)
 						}
-						structuredMeta = append(structuredMeta, fmt.Sprintf("%s=%s", key, val))
+						fmt.Printf("      Pair #%d: keyIndex=%d (%s) ➔ valueIndex=%d (%s)\n", i+1, keyIdx, key, valIdx, val)
 					}
 				}
+			} else {
+				fmt.Printf("    Raw Meta Varints:       None\n")
 			}
-
-			// Format and print log line
-			metaStr := ""
-			if len(structuredMeta) > 0 {
-				metaStr = " {"
-				for i, sm := range structuredMeta {
-					if i > 0 {
-						metaStr += ", "
-					}
-					metaStr += sm
-				}
-				metaStr += "}"
-			}
-			fmt.Printf("[%s] %s%s\n", entryTime.Format("2006-01-02 15:04:05.000000"), string(lineBytes), metaStr)
+			fmt.Println()
 			entryIdx++
 		}
 	}

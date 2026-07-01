@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 	"unicode"
 
@@ -39,16 +41,78 @@ type LokiEntry struct {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: go run main.go <wal-segment-file-path>")
-		fmt.Println("Example: go run main.go ./loki-data/wal/00000000")
+		fmt.Println("Usage: go run main.go <wal-file-or-directory-path>")
+		fmt.Println("Example: go run main.go ../loki-data/wal/")
 		os.Exit(1)
 	}
 
-	filePath := os.Args[1]
+	targetPath := os.Args[1]
+	info, err := os.Stat(targetPath)
+	if err != nil {
+		fmt.Printf("❌ Failed to access path %q: %v\n", targetPath, err)
+		os.Exit(1)
+	}
+
+	if info.IsDir() {
+		fmt.Printf("📂 Walking directory recursively: %s\n\n", targetPath)
+		err = filepath.Walk(targetPath, func(path string, fileInfo os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			// Skip directories
+			if fileInfo.IsDir() {
+				return nil
+			}
+			// Skip hidden files
+			baseName := filepath.Base(path)
+			if baseName[0] == '.' {
+				return nil
+			}
+			// Skip temporary checkpoint files/folders
+			if strings.Contains(path, ".tmp") {
+				return nil
+			}
+			// Only process files that have numeric names (WAL segments like 00000000)
+			if !isNumeric(baseName) {
+				return nil
+			}
+
+			fmt.Printf("\n##################################################\n")
+			fmt.Printf("📄 Processing WAL Segment: %s\n", path)
+			fmt.Printf("##################################################\n")
+			if parseErr := parseWalFile(path); parseErr != nil {
+				fmt.Printf("⚠️  Error parsing %s: %v\n", path, parseErr)
+			}
+			return nil
+		})
+		if err != nil {
+			fmt.Printf("❌ Error walking directory: %v\n", err)
+			os.Exit(1)
+		}
+	} else {
+		if err := parseWalFile(targetPath); err != nil {
+			fmt.Printf("❌ Error parsing file: %v\n", err)
+			os.Exit(1)
+		}
+	}
+}
+
+func isNumeric(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func parseWalFile(filePath string) error {
 	f, err := os.Open(filePath)
 	if err != nil {
-		fmt.Printf("❌ Failed to open WAL file: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to open WAL file: %w", err)
 	}
 	defer f.Close()
 
@@ -114,10 +178,11 @@ func main() {
 	}
 
 	if err := r.Err(); err != nil {
-		fmt.Printf("⚠️ Error encountered during WAL reading: %v\n", err)
-	} else {
-		fmt.Printf("✅ Finished reading WAL. Total records: %d\n", recordCount)
+		return fmt.Errorf("error encountered during WAL reading: %w", err)
 	}
+
+	fmt.Printf("✅ Finished reading WAL. Total records: %d\n", recordCount)
+	return nil
 }
 
 // Parse Loki Type 1 Record (Series metadata)
