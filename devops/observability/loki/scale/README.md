@@ -69,15 +69,19 @@ This directory contains a configuration to run **Grafana Loki** in a microservic
 
 ## ⚖️ Scaling the Infrastructure
 
-One of the main advantages of this architecture is the ease of scaling write and read nodes individually. Docker has internal DNS resolution that distributes traffic in a round-robin format.
+One of the main advantages of this architecture is the ease of scaling `write` and `read` nodes individually. 
 
-To scale the setup, you can run:
+To scale the setup, run:
 
 ```bash
-docker compose up -d --scale write=3 --scale read=2
+docker-compose up -d --scale write=3 --scale read=2
 ```
 
 This will spin up:
-* 3 replicas of the `write` container to handle ingestion spikes.
-* 2 replicas of the `read` container to handle multiple concurrent queries.
-* 1 Nginx gateway container that will automatically load balance connections across active replicas via Docker DNS.
+* **3 replicas** of the `write` service to handle ingestion spikes.
+* **2 replicas** of the `read` service to handle multiple concurrent queries.
+* **1 Nginx gateway** container that acts as a unified entrypoint and automatically load-balances connections.
+
+### How Scaling Works Under the Hood:
+1. **No Host Port Collisions:** The static host port mappings (such as `3101:3100` and `3102:3100`) have been removed from the `read`, `write`, and `backend` services and replaced with internal container `expose`. This prevents port conflicts on the host when launching multiple replicas. Only the Nginx `gateway` (`3100`) and `grafana` (`3000`) services publish ports to the host.
+2. **Dynamic Upstream Resolution:** Nginx is configured to use variables for its upstream targets (e.g., `set $upstream_write write; proxy_pass http://$upstream_write:3100...`). This forces Nginx to dynamically query Docker's internal DNS resolver (`127.0.0.11`) on each request (or according to TTL) rather than caching a single IP at startup, ensuring seamless load balancing and compatibility with replica scale-up/down.

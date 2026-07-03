@@ -3,6 +3,9 @@ server:
   http_listen_address: 0.0.0.0
   http_listen_port: 3100
 
+ui:
+  enabled: true
+
 memberlist:
   join_members: ["read", "write", "backend"]
   dead_node_reclaim_time: 30s

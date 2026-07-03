@@ -1,3 +1,4 @@
 logs
 elastic-kind-cluster-config
 loki-data
+.data
