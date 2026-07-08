@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gossip Protocol Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #0b0f19;
+            color: #f3f4f6;
+        }
+        
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+
+        .glass {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-card {
+            background: rgba(20, 26, 42, 0.65);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(99, 102, 241, 0.35);
+            box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .glow-green {
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .glow-yellow {
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+        }
+
+        .glow-red {
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+        }
+
+        .scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        .scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+        }
+        .scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen overflow-x-hidden pb-12">
+
+    <!-- Header -->
+    <header class="glass sticky top-0 z-50 border-b border-gray-800 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <i data-lucide="network" class="h-6 w-6 text-white animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-gray-200 to-indigo-400 bg-clip-text text-transparent">
+                        Gossip Protocol POC
+                    </h1>
+                    <p class="text-xs text-gray-400 font-medium">Distributed Key-Value Replication & Failure Detection</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4 flex-wrap">
+                <!-- Speed Slider -->
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold glass">
+                    <span class="text-gray-400">UI Animation Speed:</span>
+                    <input type="range" id="speed-slider" min="0.001" max="0.015" step="0.001" value="0.003" class="w-16 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                    <span id="speed-label" class="text-gray-250 code-font min-w-[32px] text-right">0.003</span>
+                </div>
+                <div id="convergence-status" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold glass">
+                    <span class="h-2 w-2 rounded-full bg-yellow-400 animate-ping"></span>
+                    <span class="text-gray-300">Checking convergence...</span>
+                </div>
+                <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+                    <span>SSE Connected</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Column 1: Topology Visualizer & Controls (7 Cols) -->
+        <div class="lg:col-span-7 flex flex-col gap-8">
+            
+            <!-- Network Map Card -->
+            <div class="glass-card rounded-2xl p-6 relative overflow-hidden flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="map" class="text-indigo-400 h-5 w-5"></i>
+                        <h2 class="font-semibold text-lg">Cluster Topology Graph</h2>
+                    </div>
+                    <span class="text-xs text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full font-medium">
+                        Live Animation
+                    </span>
+                </div>
+                
+                <!-- Topology Canvas -->
+                <div class="relative w-full aspect-[2/1] bg-slate-950/60 border border-gray-800/80 rounded-xl overflow-hidden shadow-inner">
+                    <canvas id="topology-canvas" class="w-full h-full block"></canvas>
+                    <div class="absolute bottom-3 left-3 flex gap-4 text-[10px] text-gray-400 glass px-2 py-1 rounded border border-gray-800">
+                        <div class="flex items-center gap-1.5">
+                            <span class="h-2 w-2 rounded-full bg-emerald-500"></span> Alive
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="h-2 w-2 rounded-full bg-amber-500"></span> Suspected
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="h-2 w-2 rounded-full bg-red-500"></span> Dead
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="h-2 w-2 rounded-full bg-gray-600"></span> Killed
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controller Panel -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- State Injector -->
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i data-lucide="edit-3" class="text-indigo-400 h-5 w-5"></i>
+                        <h3 class="font-semibold text-base">Inject State Update</h3>
+                    </div>
+                    <form id="inject-form" class="space-y-3" onsubmit="injectState(event)">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Target Node</label>
+                            <select id="inject-node-select" class="w-full bg-slate-900 border border-gray-800 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-indigo-500">
+                                <!-- Dynamic options -->
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Key</label>
+                                <input type="text" id="inject-key" value="score" required class="w-full bg-slate-900 border border-gray-800 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-indigo-500 code-font" placeholder="key_name">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Value</label>
+                                <input type="text" id="inject-val" value="100" required class="w-full bg-slate-900 border border-gray-800 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-indigo-500 code-font" placeholder="value">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 transition px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 mt-2">
+                            <i data-lucide="send" class="h-4 w-4"></i> Inject Update
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Add Node Panel -->
+                <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-2 mb-4">
+                            <i data-lucide="plus-circle" class="text-indigo-400 h-5 w-5"></i>
+                            <h3 class="font-semibold text-base">Join Dynamic Node</h3>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-4">
+                            Spawn a new gossip node. It will bootstrap via one of the active nodes and join the protocol.
+                        </p>
+                    </div>
+                    <form id="add-node-form" class="space-y-3" onsubmit="addNode(event)">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">UDP Address</label>
+                            <input type="text" id="add-node-addr" required class="w-full bg-slate-900 border border-gray-800 rounded-lg p-2 text-sm text-gray-200 focus:outline-none focus:border-indigo-500 code-font" placeholder="127.0.0.1:9006">
+                        </div>
+                        <button type="submit" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 transition px-4 py-2 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-2">
+                            <i data-lucide="plus" class="h-4 w-4"></i> Add Node
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Nodes Cards List -->
+            <div class="glass-card rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="server" class="text-indigo-400 h-5 w-5"></i>
+                        <h2 class="font-semibold text-lg">Cluster Node Management</h2>
+                    </div>
+                    <span id="nodes-count" class="text-xs font-semibold bg-gray-800 px-2.5 py-1 rounded-full text-gray-300">
+                        0 Nodes
+                    </span>
+                </div>
+                <div id="nodes-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Dynamic node cards -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Column 2: Event Logs & Detailed View (5 Cols) -->
+        <div class="lg:col-span-5 flex flex-col gap-8">
+            
+            <!-- Terminal Events Log -->
+            <div class="glass-card rounded-2xl p-6 flex flex-col h-[400px]">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="terminal" class="text-indigo-400 h-5 w-5"></i>
+                        <h2 class="font-semibold text-lg">Live Protocol Events</h2>
+                    </div>
+                    <button onclick="clearLogs()" class="text-xs text-gray-400 hover:text-white transition flex items-center gap-1">
+                        <i data-lucide="trash-2" class="h-3 w-3"></i> Clear
+                    </button>
+                </div>
+
+                <!-- Filters -->
+                <div class="flex flex-wrap gap-1.5 mb-3 text-xs">
+                    <button onclick="setLogFilter('all')" id="filter-all" class="px-2.5 py-1 rounded-md bg-indigo-600 text-white font-medium">All</button>
+                    <button onclick="setLogFilter('state')" id="filter-state" class="px-2.5 py-1 rounded-md bg-gray-800 text-gray-400 hover:text-white font-medium">State</button>
+                    <button onclick="setLogFilter('status')" id="filter-status" class="px-2.5 py-1 rounded-md bg-gray-800 text-gray-400 hover:text-white font-medium">Failures</button>
+                    <button onclick="setLogFilter('packet')" id="filter-packet" class="px-2.5 py-1 rounded-md bg-gray-800 text-gray-400 hover:text-white font-medium">Packets</button>
+                </div>
+
+                <!-- Console -->
+                <div id="terminal-console" class="flex-1 bg-black/60 border border-gray-850 rounded-xl p-3 scrollbar overflow-y-auto code-font text-xs space-y-1.5 text-gray-300">
+                    <!-- Logs appear here -->
+                    <div class="text-indigo-400">[SYSTEM] Listening for events stream...</div>
+                </div>
+            </div>
+
+            <!-- Selected Node Detail -->
+            <div class="glass-card rounded-2xl p-6 flex flex-col min-h-[300px]">
+                <div class="flex items-center gap-2 mb-4">
+                    <i data-lucide="info" class="text-indigo-400 h-5 w-5"></i>
+                    <h2 class="font-semibold text-lg">Node Inspection</h2>
+                </div>
+                <div id="inspection-content" class="text-sm text-gray-400 flex flex-col justify-center items-center flex-1 py-8 text-center">
+                    <i data-lucide="mouse-pointer-click" class="h-8 w-8 text-gray-600 mb-2"></i>
+                    Select a node card or graph node to inspect its local database and cluster view.
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script>
+        // State management
+        let nodesData = [];
+        let logFilter = 'all';
+        let selectedNodeAddr = null;
+        const maxLogLines = 200;
+        let animationSpeed = 0.003; // Default visual speed on canvas
+
+        // Animations / Canvas State
+        const canvas = document.getElementById('topology-canvas');
+        const ctx = canvas.getContext('2d');
+        let nodePositions = {}; // Map of Addr -> {x, y, radius, color, targetColor, label}
+        let particles = [];     // Array of {x, y, targetX, targetY, progress, color}
+
+        // Initialize lucide
+        lucide.createIcons();
+
+        // Speed slider control
+        const speedSlider = document.getElementById('speed-slider');
+        const speedLabel = document.getElementById('speed-label');
+        if (speedSlider && speedLabel) {
+            speedSlider.addEventListener('input', (e) => {
+                animationSpeed = parseFloat(e.target.value);
+                speedLabel.innerText = animationSpeed.toFixed(3);
+            });
+        }
+
+        // Handle Canvas Resizing
+        function resizeCanvas() {
+            const rect = canvas.parentNode.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            // Redraw positions based on new size
+            updateNodePositions();
+        }
+        window.addEventListener('resize', resizeCanvas);
+        setTimeout(resizeCanvas, 100);
+
+        // Fetch initial status
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                nodesData = data;
+                updateNodesUI();
+                updateNodePositions();
+                checkConvergence();
+                updateInspection();
+            } catch (err) {
+                console.error("Error fetching cluster status:", err);
+            }
+        }
+
+        // Setup SSE Event Stream
+        function setupEventStream() {
+            const eventSource = new EventSource('/api/events');
+            
+            eventSource.onmessage = (event) => {
+                const ev = JSON.parse(event.data);
+                appendLog(ev);
+                
+                // If it is a state update or status change, refresh overall status snapshot
+                if (ev.type === 'state_update' || ev.type === 'status_change' || ev.type === 'log') {
+                    fetchStatus();
+                }
+
+                // If a packet is sent, trigger a visual particle animation
+                if (ev.type === 'sent' && ev.node && ev.target) {
+                    triggerGossipAnimation(ev.node, ev.target);
+                }
+            };
+
+            eventSource.onerror = (err) => {
+                console.error("EventSource failed:", err);
+                eventSource.close();
+                setTimeout(setupEventStream, 3000); // Retry connection
+            };
+        }
+
+        // Compute circular node layouts
+        function updateNodePositions() {
+            const w = canvas.width / window.devicePixelRatio;
+            const h = canvas.height / window.devicePixelRatio;
+            if (w === 0 || h === 0) return;
+
+            const centerX = w / 2;
+            const centerY = h / 2;
+            const radius = Math.min(w, h) * 0.35;
+
+            const nodes = nodesData;
+            const numNodes = nodes.length;
+
+            nodes.forEach((n, idx) => {
+                const theta = (2 * Math.PI * idx) / numNodes;
+                const x = centerX + radius * Math.cos(theta);
+                const y = centerY + radius * Math.sin(theta);
+
+                let color = '#10b981'; // Green (Alive)
+                if (n.is_killed) {
+                    color = '#4b5563'; // Gray (Killed)
+                } else {
+                    // Check if self view is Suspected/Dead by examining other nodes
+                    // but usually, the node's local reports are:
+                    const selfRecord = n.members.find(m => m.addr === n.addr);
+                    if (selfRecord) {
+                        if (selfRecord.status === 'SUSPECTED') color = '#f59e0b'; // Amber
+                        if (selfRecord.status === 'DEAD') color = '#ef4444';     // Red
+                    }
+                }
+
+                nodePositions[n.addr] = {
+                    x,
+                    y,
+                    radius: 18,
+                    color: color,
+                    label: n.addr.split(':').pop(), // Just show port
+                    addr: n.addr,
+                    isKilled: n.is_killed
+                };
+            });
+        }
+
+        // Render Canvas (Topology Map)
+        function drawCanvas() {
+            const w = canvas.width / window.devicePixelRatio;
+            const h = canvas.height / window.devicePixelRatio;
+            ctx.clearRect(0, 0, w, h);
+
+            // 1. Draw connections/links between nodes (subtle lines)
+            ctx.lineWidth = 1.5;
+            const addresses = Object.keys(nodePositions);
+            for (let i = 0; i < addresses.length; i++) {
+                for (let j = i + 1; j < addresses.length; j++) {
+                    const nodeA = nodePositions[addresses[i]];
+                    const nodeB = nodePositions[addresses[j]];
+
+                    // Check if both nodes are alive/not killed
+                    if (!nodeA.isKilled && !nodeB.isKilled) {
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+                        ctx.beginPath();
+                        ctx.moveTo(nodeA.x, nodeA.y);
+                        ctx.lineTo(nodeB.x, nodeB.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // 2. Draw active traveling particles (Gossip messages)
+            particles.forEach((p, idx) => {
+                const currentX = p.startX + (p.targetX - p.startX) * p.progress;
+                const currentY = p.startY + (p.targetY - p.startY) * p.progress;
+
+                // Draw path line glow
+                ctx.strokeStyle = `rgba(99, 102, 241, ${0.4 * (1 - p.progress)})`;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(p.startX, p.startY);
+                ctx.lineTo(currentX, currentY);
+                ctx.stroke();
+
+                // Draw glowing ball
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(currentX, currentY, 5, 0, 2 * Math.PI);
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 10;
+                ctx.fill();
+                ctx.shadowBlur = 0; // Reset shadow
+
+                p.progress += animationSpeed; // Update speed (customizable in UI)
+            });
+
+            // Filter out completed particles
+            particles = particles.filter(p => p.progress < 1);
+
+            // 3. Draw nodes
+            for (const addr in nodePositions) {
+                const node = nodePositions[addr];
+
+                // Outer Ring Glow if active/inspected
+                if (addr === selectedNodeAddr) {
+                    ctx.strokeStyle = 'rgba(99, 102, 241, 0.8)';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, node.radius + 4, 0, 2 * Math.PI);
+                    ctx.stroke();
+                }
+
+                // Node Circle Fill
+                ctx.fillStyle = node.color;
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, node.radius, 0, 2 * Math.PI);
+                ctx.fill();
+
+                // Draw port text in center
+                ctx.fillStyle = '#0b0f19';
+                ctx.font = 'bold 10px Outfit';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(node.label, node.x, node.y);
+            }
+
+            requestAnimationFrame(drawCanvas);
+        }
+
+        // Trigger message propagation animation between nodes
+        function triggerGossipAnimation(fromAddr, toAddr) {
+            const fromNode = nodePositions[fromAddr];
+            const toNode = nodePositions[toAddr];
+            if (!fromNode || !toNode) return;
+
+            particles.push({
+                startX: fromNode.x,
+                startY: fromNode.y,
+                targetX: toNode.x,
+                targetY: toNode.y,
+                progress: 0,
+                color: '#6366f1' // Glowing Indigo
+            });
+        }
+
+        // Handle Canvas Click to Select Node
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            for (const addr in nodePositions) {
+                const node = nodePositions[addr];
+                const dist = Math.hypot(clickX - node.x, clickY - node.y);
+                if (dist <= node.radius + 5) {
+                    selectNode(addr);
+                    break;
+                }
+            }
+        });
+
+        // UI Helpers
+
+        function selectNode(addr) {
+            selectedNodeAddr = addr;
+            fetchStatus(); // Trigger update instantly
+        }
+
+        // Update the inspector layout with node details
+        function updateInspection() {
+            const content = document.getElementById('inspection-content');
+            if (!selectedNodeAddr) return;
+
+            const node = nodesData.find(n => n.addr === selectedNodeAddr);
+            if (!node) {
+                content.innerHTML = `
+                    <i data-lucide="mouse-pointer-click" class="h-8 w-8 text-gray-600 mb-2"></i>
+                    Node offline or not found.
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            let statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Active</span>`;
+            if (node.is_killed) {
+                statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/20">Killed</span>`;
+            }
+
+            // Compile local Key-Value Store view
+            let dbRows = '';
+            const dbKeys = Object.keys(node.state);
+            if (dbKeys.length === 0) {
+                dbRows = `<tr><td colspan="3" class="px-3 py-2 text-center text-gray-500 italic">Database is empty</td></tr>`;
+            } else {
+                dbKeys.sort().forEach(k => {
+                    const item = node.state[k];
+                    dbRows += `
+                        <tr class="border-b border-gray-800/50 hover:bg-slate-900/30">
+                            <td class="px-3 py-2 font-medium text-gray-200 code-font">${k}</td>
+                            <td class="px-3 py-2 text-indigo-300 code-font">${item.val}</td>
+                            <td class="px-3 py-2 text-[10px] text-gray-400 code-font">v${item.version}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // Compile local Membership table view
+            let memberRows = '';
+            if (node.members.length === 0) {
+                memberRows = `<tr><td colspan="3" class="px-3 py-2 text-center text-gray-500 italic">No peers known</td></tr>`;
+            } else {
+                node.members.sort((a,b) => a.addr.localeCompare(b.addr)).forEach(m => {
+                    let badge = '';
+                    if (m.status === 'ALIVE') badge = '<span class="text-emerald-400 font-semibold">ALIVE</span>';
+                    if (m.status === 'SUSPECTED') badge = '<span class="text-amber-500 font-semibold">SUSPECTED</span>';
+                    if (m.status === 'DEAD') badge = '<span class="text-red-500 font-semibold">DEAD</span>';
+
+                    const isSelf = m.addr === node.addr ? ' <span class="text-[9px] bg-slate-800 text-gray-400 px-1 rounded">self</span>' : '';
+
+                    memberRows += `
+                        <tr class="border-b border-gray-800/50 hover:bg-slate-900/30">
+                            <td class="px-3 py-2 font-medium text-gray-300 code-font">${m.addr}${isSelf}</td>
+                            <td class="px-3 py-2 text-[11px] code-font">${m.heartbeat_count}</td>
+                            <td class="px-3 py-2 text-xs">${badge}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            content.innerHTML = `
+                <div class="w-full text-left space-y-6">
+                    <!-- Heading -->
+                    <div class="flex items-center justify-between pb-3 border-b border-gray-800">
+                        <div>
+                            <h3 class="text-base font-bold text-gray-150">${node.addr}</h3>
+                            <p class="text-xs text-gray-400">Node type: Gossip (LWW Replicator)</p>
+                        </div>
+                        ${statusBadge}
+                    </div>
+
+                    <!-- Database State -->
+                    <div>
+                        <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+                            <i data-lucide="database" class="h-3.5 w-3.5 text-indigo-400"></i> Local Key-Value Store
+                        </h4>
+                        <div class="border border-gray-850 rounded-xl overflow-hidden bg-slate-950/40">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-900/80 border-b border-gray-850 text-gray-400">
+                                        <th class="px-3 py-2 font-semibold">Key</th>
+                                        <th class="px-3 py-2 font-semibold">Value</th>
+                                        <th class="px-3 py-2 font-semibold">Ver</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${dbRows}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Membership View -->
+                    <div>
+                        <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+                            <i data-lucide="users" class="h-3.5 w-3.5 text-indigo-400"></i> Peer Membership View
+                        </h4>
+                        <div class="border border-gray-850 rounded-xl overflow-hidden bg-slate-950/40">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-900/80 border-b border-gray-850 text-gray-400">
+                                        <th class="px-3 py-2 font-semibold">Peer Addr</th>
+                                        <th class="px-3 py-2 font-semibold">Heartbeat</th>
+                                        <th class="px-3 py-2 font-semibold">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${memberRows}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        // Update the list of node cards
+        function updateNodesUI() {
+            const grid = document.getElementById('nodes-grid');
+            const select = document.getElementById('inject-node-select');
+            const countBadge = document.getElementById('nodes-count');
+            
+            countBadge.innerText = `${nodesData.length} Nodes`;
+
+            // Auto-populate the next UDP port address suggestion
+            const nextPort = (() => {
+                let maxPort = 9000;
+                nodesData.forEach(n => {
+                    const port = parseInt(n.addr.split(':').pop());
+                    if (!isNaN(port) && port > maxPort) {
+                        maxPort = port;
+                    }
+                });
+                return maxPort + 1;
+            })();
+            const input = document.getElementById('add-node-addr');
+            if (input && document.activeElement !== input) {
+                input.value = `127.0.0.1:${nextPort}`;
+            }
+
+            // Update Inject selector options
+            const currentSelectVal = select.value;
+            select.innerHTML = '';
+            nodesData.forEach(n => {
+                if (!n.is_killed) {
+                    const opt = document.createElement('option');
+                    opt.value = n.addr;
+                    opt.innerText = n.addr;
+                    select.appendChild(opt);
+                }
+            });
+            if (currentSelectVal) {
+                select.value = currentSelectVal;
+            }
+
+            // Update Grid Cards
+            grid.innerHTML = '';
+            nodesData.sort((a,b) => a.addr.localeCompare(b.addr)).forEach(n => {
+                const port = n.addr.split(':').pop();
+                const isSelected = n.addr === selectedNodeAddr;
+                
+                let borderClass = isSelected ? 'border-indigo-500 shadow-md shadow-indigo-600/10' : 'border-gray-800';
+                let statusDot = `<span class="h-2 w-2 rounded-full bg-emerald-400 glow-green"></span>`;
+                let statusText = 'ALIVE';
+                let actionBtn = `
+                    <button onclick="killNode('${n.addr}')" class="text-xs px-2.5 py-1 rounded bg-red-950/50 hover:bg-red-900/50 text-red-400 border border-red-500/20 font-medium transition flex items-center gap-1">
+                        <i data-lucide="zap-off" class="h-3 w-3"></i> Kill Node
+                    </button>
+                `;
+
+                if (n.is_killed) {
+                    statusDot = `<span class="h-2 w-2 rounded-full bg-gray-500"></span>`;
+                    statusText = 'KILLED';
+                    borderClass = isSelected ? 'border-indigo-500/50 opacity-70' : 'border-gray-900 opacity-60 bg-gray-950/20';
+                    actionBtn = `
+                        <button onclick="reviveNode('${n.addr}')" class="text-xs px-2.5 py-1 rounded bg-emerald-950/50 hover:bg-emerald-900/50 text-emerald-400 border border-emerald-500/20 font-medium transition flex items-center gap-1">
+                            <i data-lucide="zap" class="h-3 w-3"></i> Revive Node
+                        </button>
+                    `;
+                } else {
+                    // Check local record status
+                    const selfRecord = n.members.find(m => m.addr === n.addr);
+                    if (selfRecord) {
+                        if (selfRecord.status === 'SUSPECTED') {
+                            statusDot = `<span class="h-2.5 w-2.5 rounded-full bg-amber-500 glow-yellow animate-ping"></span>`;
+                            statusText = 'SUSPECTED';
+                        } else if (selfRecord.status === 'DEAD') {
+                            statusDot = `<span class="h-2.5 w-2.5 rounded-full bg-red-500 glow-red"></span>`;
+                            statusText = 'DEAD';
+                        }
+                    }
+                }
+
+                const keysCount = Object.keys(n.state).length;
+
+                const card = document.createElement('div');
+                card.className = `glass border rounded-xl p-4 cursor-pointer flex flex-col justify-between gap-3 ${borderClass}`;
+                card.onclick = (e) => {
+                    // Prevent trigger on button click
+                    if (e.target.closest('button')) return;
+                    selectNode(n.addr);
+                };
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-xs text-indigo-400 font-bold code-font">PORT ${port}</span>
+                            <h3 class="text-sm font-semibold text-gray-200">${n.addr}</h3>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            ${statusDot}
+                            <span class="text-[10px] font-bold tracking-wider text-gray-400">${statusText}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between text-xs text-gray-400">
+                        <span>Database: <strong class="text-gray-200 code-font">${keysCount} keys</strong></span>
+                        <span>Peers known: <strong class="text-gray-200 code-font">${n.members.length}</strong></span>
+                    </div>
+
+                    <div class="flex justify-end pt-1">
+                        ${actionBtn}
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        // Check if all active/non-killed nodes have identical state (Convergence)
+        function checkConvergence() {
+            const activeNodes = nodesData.filter(n => !n.is_killed);
+            const statusDiv = document.getElementById('convergence-status');
+            
+            if (activeNodes.length <= 1) {
+                statusDiv.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-800 text-gray-400 border border-gray-700";
+                statusDiv.innerHTML = `
+                    <span class="h-2 w-2 rounded-full bg-gray-500"></span>
+                    <span>Single Active Node</span>
+                `;
+                return;
+            }
+
+            // Check if every active node has the same keys and identical values/versions
+            let converged = true;
+            const baselineNode = activeNodes[0];
+            const baselineKeys = Object.keys(baselineNode.state);
+
+            for (let i = 1; i < activeNodes.length; i++) {
+                const compNode = activeNodes[i];
+                const compKeys = Object.keys(compNode.state);
+
+                if (baselineKeys.length !== compKeys.length) {
+                    converged = false;
+                    break;
+                }
+
+                // Match contents
+                for (const key of baselineKeys) {
+                    const baselineVal = baselineNode.state[key];
+                    const compVal = compNode.state[key];
+
+                    if (!compVal || baselineVal.val !== compVal.val || baselineVal.version !== compVal.version) {
+                        converged = false;
+                        break;
+                    }
+                }
+                if (!converged) break;
+            }
+
+            if (converged) {
+                statusDiv.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                statusDiv.innerHTML = `
+                    <span class="h-2 w-2 rounded-full bg-emerald-400 glow-green"></span>
+                    <span>Cluster Converged</span>
+                `;
+            } else {
+                statusDiv.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20";
+                statusDiv.innerHTML = `
+                    <span class="h-2 w-2 rounded-full bg-amber-500 glow-yellow animate-pulse"></span>
+                    <span>Synchronizing (Gossip in progress)</span>
+                `;
+            }
+        }
+
+        // Append log line in Console
+        function appendLog(ev) {
+            const consoleEl = document.getElementById('terminal-console');
+            
+            // Log filtering
+            let shouldLog = true;
+            if (logFilter === 'state' && ev.type !== 'state_update') shouldLog = false;
+            if (logFilter === 'status' && ev.type !== 'status_change') shouldLog = false;
+            if (logFilter === 'packet' && ev.type !== 'sent' && ev.type !== 'received') shouldLog = false;
+
+            if (!shouldLog) return;
+
+            const timeStr = new Date(ev.timestamp).toLocaleTimeString();
+            const nodePort = ev.node.split(':').pop();
+
+            let colorClass = 'text-gray-300';
+            let prefix = `[PORT ${nodePort}]`;
+
+            if (ev.type === 'sent') {
+                colorClass = 'text-indigo-400/80';
+                prefix = `[PORT ${nodePort}] ↗`;
+            } else if (ev.type === 'received') {
+                colorClass = 'text-emerald-400/85';
+                prefix = `[PORT ${nodePort}] ↙`;
+            } else if (ev.type === 'status_change') {
+                colorClass = 'text-yellow-400';
+                prefix = `[PORT ${nodePort}] ⚠`;
+            } else if (ev.type === 'state_update') {
+                colorClass = 'text-cyan-400 font-semibold';
+                prefix = `[PORT ${nodePort}] 🗲`;
+            } else if (ev.type === 'log') {
+                colorClass = 'text-fuchsia-400';
+                prefix = `[PORT ${nodePort}] ⚙`;
+            }
+
+            const row = document.createElement('div');
+            row.className = `${colorClass} py-0.5 border-b border-white/5 last:border-0`;
+            row.innerHTML = `<span class="text-gray-500">[${timeStr}]</span> <span class="font-semibold text-[10px] bg-slate-900 border border-gray-800 px-1 rounded mr-1">${prefix}</span> ${ev.detail}`;
+            
+            consoleEl.appendChild(row);
+
+            // Cap logs count
+            while (consoleEl.children.length > maxLogLines) {
+                consoleEl.removeChild(consoleEl.firstChild);
+            }
+
+            // Scroll to bottom
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        // Actions
+
+        function setLogFilter(filter) {
+            logFilter = filter;
+            // Update filter buttons styling
+            ['all', 'state', 'status', 'packet'].forEach(f => {
+                const btn = document.getElementById(`filter-${f}`);
+                if (f === filter) {
+                    btn.className = "px-2.5 py-1 rounded-md bg-indigo-600 text-white font-medium";
+                } else {
+                    btn.className = "px-2.5 py-1 rounded-md bg-gray-800 text-gray-400 hover:text-white font-medium";
+                }
+            });
+            clearLogsDisplay();
+            fetchStatus(); // Trigger reload
+        }
+
+        function clearLogs() {
+            clearLogsDisplay();
+        }
+
+        function clearLogsDisplay() {
+            const consoleEl = document.getElementById('terminal-console');
+            consoleEl.innerHTML = '<div class="text-gray-500">[SYSTEM] Terminal logs cleared.</div>';
+        }
+
+        async function killNode(addr) {
+            try {
+                await fetch('/api/kill', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ node: addr })
+                });
+                fetchStatus();
+            } catch (err) {
+                console.error("Failed to kill node:", err);
+            }
+        }
+
+        async function reviveNode(addr) {
+            try {
+                await fetch('/api/revive', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ node: addr })
+                });
+                fetchStatus();
+            } catch (err) {
+                console.error("Failed to revive node:", err);
+            }
+        }
+
+        async function injectState(event) {
+            event.preventDefault();
+            const node = document.getElementById('inject-node-select').value;
+            const key = document.getElementById('inject-key').value;
+            const value = document.getElementById('inject-val').value;
+
+            if (!node) {
+                alert("Please add an active node first!");
+                return;
+            }
+
+            try {
+                await fetch('/api/inject', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ node, key, value })
+                });
+                fetchStatus();
+            } catch (err) {
+                console.error("Failed to inject state:", err);
+            }
+        }
+
+        async function addNode(event) {
+            event.preventDefault();
+            const addr = document.getElementById('add-node-addr').value;
+
+            if (!addr) return;
+
+            try {
+                const res = await fetch('/api/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ node: addr })
+                });
+                
+                const data = await res.json();
+                if (data.error) {
+                    alert("Error: " + data.error);
+                } else {
+                    document.getElementById('add-node-addr').value = '';
+                    fetchStatus();
+                }
+            } catch (err) {
+                console.error("Failed to add node:", err);
+            }
+        }
+
+        // Initialize App
+        fetchStatus();
+        setupEventStream();
+        
+        // Loop canvas drawing
+        requestAnimationFrame(drawCanvas);
+
+        // Auto-refresh stats fallback
+        setInterval(fetchStatus, 3000);
+        
+    </script>
+</body>
+</html>
