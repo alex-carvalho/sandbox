@@ -1,4 +1,4 @@
-# Walkthrough - Gossip Protocol POC
+# Gossip Protocol POC
 
 This project implements a Go-based **Gossip Protocol Proof of Concept (POC)**. It demonstrates decentralized, eventual-consistency state replication (Last-Write-Wins Key-Value database) and failure detection/membership tracking (based on heartbeat counters and suspected/dead status timers).
 
@@ -10,22 +10,22 @@ It comes with an interactive **Web Dashboard** featuring a custom HTML5 canvas n
 
 The project has zero third-party dependencies and uses only the Go standard library:
 
-1. **[gossip/packet.go](file:///Users/alex/workspace/sandbox/distributed-systems/gossip/simple/gossip/packet.go)**:
+1. **[gossip/packet.go](./packet.go)**:
    Defines the network message structures (`GossipMessage`, `Member`, `Value`). Uses JSON serialization over UDP.
-2. **[gossip/membership.go](file:///Users/alex/workspace/sandbox/distributed-systems/gossip/simple/gossip/membership.go)**:
+2. **[gossip/membership.go](./membership.go)**:
    Implements the thread-safe `MembershipTable`. Handles peer list merging (alive/suspected/dead updates), self-status refutation (if another node reports this node is suspected/dead, it increments its heartbeat and refutes), and failure timeouts.
-3. **[gossip/node.go](file:///Users/alex/workspace/sandbox/distributed-systems/gossip/simple/gossip/node.go)**:
+3. **[gossip/node.go](./node.go)**:
    The core gossip worker. Spawns UDP sockets and runs three independent goroutines per node:
    - **UDP Listener**: Listens for incoming gossip and merges state & membership.
    - **Gossip Loop**: Periodically increments heartbeat, selects $k$ random peers (fanout), and writes UDP packets.
    - **Failure Detector Loop**: Periodically scans known peers and transitions stale peers to `SUSPECTED` or `DEAD`.
-4. **[gossip/simulator.go](file:///Users/alex/workspace/sandbox/distributed-systems/gossip/simple/gossip/simulator.go)**:
+4. **[gossip/simulator.go](./simulator.go)**:
    Manages a cluster of in-memory nodes. Exposes controls to crash/kill nodes, revive them (with restored KV state), dynamically add nodes, and inject key-value updates. Pipes internal node events to a unified channel.
-5. **[gossip/web.go](file:///Users/alex/workspace/sandbox/distributed-systems/gossip/simple/gossip/web.go)**:
+5. **[gossip/web.go](./web.go)**:
    Runs an HTTP server. Emits SSE (Server-Sent Events) to stream real-time node events to the client and exposes REST endpoints for dashboard commands.
-6. **[gossip/index.html](file:///Users/alex/workspace/sandbox/distributed-systems/gossip/simple/gossip/index.html)**:
+6. **[gossip/index.html](./index.html)**:
    The UI dashboard. Features a responsive grid, glowing glassmorphism theme, custom HTML5 Canvas rendering of the circular node layout, particle-based message animations, log filters, and interactive simulation controls.
-7. **[main.go](file:///Users/alex/workspace/sandbox/distributed-systems/gossip/simple/main.go)**:
+7. **[main.go](./main.go)**:
    CLI entry point. Parses configuration flags and launches either the visual simulation or a standalone interactive terminal-based node.
 
 ---

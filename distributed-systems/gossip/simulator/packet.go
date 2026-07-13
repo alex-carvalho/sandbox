@@ -1,4 +1,4 @@
-package gossip
+package main
 
 // MemberStatus represents the health/reachability of a node.
 type MemberStatus string

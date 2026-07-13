@@ -13,8 +13,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-
-	"simple-gossip/gossip"
 )
 
 func main() {
@@ -33,7 +31,7 @@ func main() {
 	flag.Parse()
 
 	// Configuration structures
-	nodeConfig := gossip.NodeConfig{
+	nodeConfig := NodeConfig{
 		GossipInterval: time.Duration(*gossipInterval) * time.Millisecond,
 		SuspectTimeout: time.Duration(*suspectTimeout) * time.Millisecond,
 		DeadTimeout:    time.Duration(*deadTimeout) * time.Millisecond,
@@ -49,9 +47,9 @@ func main() {
 	}
 }
 
-func runSimulation(httpPort int, clusterSize int, config gossip.NodeConfig) {
+func runSimulation(httpPort int, clusterSize int, config NodeConfig) {
 	// Initialize the simulation controller
-	sim := gossip.NewSimulator(
+	sim := NewSimulator(
 		config.GossipInterval,
 		config.SuspectTimeout,
 		config.DeadTimeout,
@@ -77,22 +75,22 @@ func runSimulation(httpPort int, clusterSize int, config gossip.NodeConfig) {
 	}()
 
 	// Start the embedded Web Server
-	webServer := gossip.NewWebServer(sim, httpPort)
+	webServer := NewWebServer(sim, httpPort)
 	if err := webServer.Start(); err != nil {
 		log.Fatalf("Failed to run Web visualizer server: %v", err)
 	}
 }
 
-func runStandaloneNode(port int, peersStr string, config gossip.NodeConfig, enableUI bool, httpPort int, visualizerURL string) {
+func runStandaloneNode(port int, peersStr string, config NodeConfig, enableUI bool, httpPort int, visualizerURL string) {
 	config.Addr = fmt.Sprintf("127.0.0.1:%d", port) // bind locally
 
-	var webServer *gossip.WebServer
+	var webServer *WebServer
 	if enableUI {
-		webServer = gossip.NewWebServer(nil, httpPort)
+		webServer = NewWebServer(nil, httpPort)
 	}
 
 	// Output node events to console and broadcast to local/remote visualizer
-	config.OnEvent = func(ev gossip.NodeEvent) {
+	config.OnEvent = func(ev NodeEvent) {
 		timeStr := time.UnixMilli(ev.Timestamp).Format("15:04:05.000")
 		fmt.Printf("[%s] [%s] %s\n", timeStr, ev.Type, ev.Detail)
 		if webServer != nil {
@@ -103,7 +101,7 @@ func runStandaloneNode(port int, peersStr string, config gossip.NodeConfig, enab
 		}
 	}
 
-	node, err := gossip.NewNode(config, nil, nil)
+	node, err := NewNode(config, nil, nil)
 	if err != nil {
 		log.Fatalf("Failed to construct node: %v", err)
 	}
@@ -192,9 +190,9 @@ func runStandaloneNode(port int, peersStr string, config gossip.NodeConfig, enab
 			fmt.Printf("Membership Table (%d nodes total):\n", len(members))
 			for _, m := range members {
 				statusColor := "\033[32m" // Green
-				if m.Status == gossip.StatusSuspected {
+				if m.Status == StatusSuspected {
 					statusColor = "\033[33m" // Yellow
-				} else if m.Status == gossip.StatusDead {
+				} else if m.Status == StatusDead {
 					statusColor = "\033[31m" // Red
 				}
 				fmt.Printf("  - %s : %s%s\033[0m (heartbeat: %d)\n", m.Addr, statusColor, m.Status, m.HeartbeatCount)
@@ -229,7 +227,7 @@ func openBrowser(url string) {
 }
 
 // reportEventToVisualizer sends a telemetry log event back to the visualizer web server.
-func reportEventToVisualizer(visualizerURL string, ev gossip.NodeEvent) {
+func reportEventToVisualizer(visualizerURL string, ev NodeEvent) {
 	data, err := json.Marshal(ev)
 	if err != nil {
 		return
