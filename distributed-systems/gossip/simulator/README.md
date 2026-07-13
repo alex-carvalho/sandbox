@@ -109,7 +109,5 @@ Type commands directly in any terminal session:
 - `exit` (to stop the node)
 
 ## Simulator Video
-<iframe width="560" height="315" src="https://www.youtube.com/embed/vVfyOetC0EY?si=T8-xGA8yWcKtJBJm" 
-    title="YouTube video player" frameborder="0" 
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-    referrerpolicy="strict-origin-when-cross-origin" allowfullscreen />
+
+[![Simulator Video](http://img.youtube.com/vi/vVfyOetC0EY/0.jpg)](http://www.youtube.com/watch?v=vVfyOetC0EY "Simulator Video")
