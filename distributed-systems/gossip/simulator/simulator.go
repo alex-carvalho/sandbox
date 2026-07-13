@@ -6,13 +6,11 @@ import (
 	"time"
 )
 
-// KilledState preserves the state of a node across restarts.
 type KilledState struct {
 	State   map[string]Value
 	Members []Member
 }
 
-// NodeStatus represents the current visual state of a node in the simulator.
 type NodeStatus struct {
 	Addr     string           `json:"addr"`
 	IsKilled bool             `json:"is_killed"`
@@ -20,7 +18,6 @@ type NodeStatus struct {
 	State    map[string]Value `json:"state"`
 }
 
-// Simulator manages a collection of local gossip nodes.
 type Simulator struct {
 	mu           sync.RWMutex
 	nodes        map[string]*Node
@@ -29,7 +26,6 @@ type Simulator struct {
 	config       NodeConfig // Base config template
 }
 
-// NewSimulator creates a simulator instance.
 func NewSimulator(gossipInterval, suspectTimeout, deadTimeout time.Duration, fanout int) *Simulator {
 	sim := &Simulator{
 		nodes:        make(map[string]*Node),
@@ -43,7 +39,6 @@ func NewSimulator(gossipInterval, suspectTimeout, deadTimeout time.Duration, fan
 		DeadTimeout:    deadTimeout,
 		Fanout:         fanout,
 		OnEvent: func(ev NodeEvent) {
-			// Forward all node events to the simulator channel
 			select {
 			case sim.eventsChan <- ev:
 			default:
@@ -55,12 +50,10 @@ func NewSimulator(gossipInterval, suspectTimeout, deadTimeout time.Duration, fan
 	return sim
 }
 
-// Events returns the channel emitting node events.
 func (s *Simulator) Events() <-chan NodeEvent {
 	return s.eventsChan
 }
 
-// StartCluster initializes a cluster of N nodes.
 func (s *Simulator) StartCluster(basePort int, size int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -70,7 +63,6 @@ func (s *Simulator) StartCluster(basePort int, size int) error {
 		addresses[i] = fmt.Sprintf("127.0.0.1:%d", basePort+i)
 	}
 
-	// Create nodes
 	for _, addr := range addresses {
 		node, err := NewNode(NodeConfig{
 			Addr:           addr,
@@ -86,7 +78,6 @@ func (s *Simulator) StartCluster(basePort int, size int) error {
 		s.nodes[addr] = node
 	}
 
-	// Interconnect nodes initially by providing seed peers
 	for addr, node := range s.nodes {
 		for _, peerAddr := range addresses {
 			if peerAddr != addr {
@@ -95,7 +86,6 @@ func (s *Simulator) StartCluster(basePort int, size int) error {
 		}
 	}
 
-	// Start all nodes
 	for _, node := range s.nodes {
 		if err := node.Start(); err != nil {
 			return fmt.Errorf("failed to start node %s: %w", node.config.Addr, err)
@@ -105,7 +95,6 @@ func (s *Simulator) StartCluster(basePort int, size int) error {
 	return nil
 }
 
-// StopCluster shuts down all active nodes.
 func (s *Simulator) StopCluster() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -116,7 +105,6 @@ func (s *Simulator) StopCluster() {
 	s.nodes = make(map[string]*Node)
 }
 
-// KillNode simulates a node crash/network disconnection.
 func (s *Simulator) KillNode(addr string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -126,17 +114,14 @@ func (s *Simulator) KillNode(addr string) error {
 		return fmt.Errorf("node %s not found or already killed", addr)
 	}
 
-	// Save state before stopping
 	s.killedStates[addr] = &KilledState{
 		State:   node.GetStateSnapshot(),
 		Members: node.GetMembers(),
 	}
 
-	// Stop node loops and UDP socket
 	node.Stop()
 	delete(s.nodes, addr)
 
-	// Emit simulation event
 	s.config.OnEvent(NodeEvent{
 		Node:      addr,
 		Type:      "status_change",
@@ -147,7 +132,6 @@ func (s *Simulator) KillNode(addr string) error {
 	return nil
 }
 
-// ReviveNode recovers a previously killed node.
 func (s *Simulator) ReviveNode(addr string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -203,7 +187,6 @@ func (s *Simulator) ReviveNode(addr string) error {
 	return nil
 }
 
-// AddNode dynamically spawns a new node and joins it to the cluster.
 func (s *Simulator) AddNode(addr string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -212,7 +195,6 @@ func (s *Simulator) AddNode(addr string) error {
 		return fmt.Errorf("node %s is already running", addr)
 	}
 
-	// Find an active bootstrap peer address
 	var bootstrapPeer string
 	for activeAddr := range s.nodes {
 		bootstrapPeer = activeAddr
@@ -237,7 +219,6 @@ func (s *Simulator) AddNode(addr string) error {
 
 	s.nodes[addr] = node
 
-	// If there's a bootstrap peer, connect it
 	if bootstrapPeer != "" {
 		node.AddPeer(bootstrapPeer)
 		s.config.OnEvent(NodeEvent{
@@ -251,7 +232,6 @@ func (s *Simulator) AddNode(addr string) error {
 	return nil
 }
 
-// InjectValue sets a key-value pair on a specific node.
 func (s *Simulator) InjectValue(addr, key, val string) error {
 	s.mu.RLock()
 	node, exists := s.nodes[addr]
@@ -265,14 +245,12 @@ func (s *Simulator) InjectValue(addr, key, val string) error {
 	return nil
 }
 
-// GetStatusSnapshot collects the state of all nodes (active and dead).
 func (s *Simulator) GetStatusSnapshot() []NodeStatus {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	statuses := make([]NodeStatus, 0, len(s.nodes)+len(s.killedStates))
 
-	// Active nodes
 	for addr, node := range s.nodes {
 		statuses = append(statuses, NodeStatus{
 			Addr:     addr,
@@ -282,7 +260,6 @@ func (s *Simulator) GetStatusSnapshot() []NodeStatus {
 		})
 	}
 
-	// Killed nodes
 	for addr, state := range s.killedStates {
 		statuses = append(statuses, NodeStatus{
 			Addr:     addr,

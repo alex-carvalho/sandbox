@@ -9,7 +9,6 @@ const (
 	StatusDead      MemberStatus = "DEAD"
 )
 
-// Member represents the metadata of a node in the cluster.
 type Member struct {
 	Addr           string       `json:"addr"`
 	HeartbeatCount uint64       `json:"heartbeat_count"`
@@ -24,7 +23,6 @@ type Value struct {
 	Timestamp int64  `json:"timestamp"` // Nanoseconds timestamp of the update
 }
 
-// GossipMessage is the packet serialized and sent over UDP.
 type GossipMessage struct {
 	FromAddr string           `json:"from_addr"`
 	Members  []Member         `json:"members"`

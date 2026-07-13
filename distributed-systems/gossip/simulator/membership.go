@@ -11,13 +11,11 @@ type MembershipTable struct {
 	members map[string]*Member
 }
 
-// NewMembershipTable initializes a new table.
 func NewMembershipTable(selfAddr string) *MembershipTable {
 	table := &MembershipTable{
 		selfAddr: selfAddr,
 		members:  make(map[string]*Member),
 	}
-	// Add self to the table
 	table.members[selfAddr] = &Member{
 		Addr:           selfAddr,
 		HeartbeatCount: 1,
@@ -27,7 +25,6 @@ func NewMembershipTable(selfAddr string) *MembershipTable {
 	return table
 }
 
-// GetMembers returns a copy of all members in the table.
 func (t *MembershipTable) GetMembers() []Member {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
@@ -56,7 +53,6 @@ func (t *MembershipTable) GetActivePeers() []string {
 	return peers
 }
 
-// IncrementSelfHeartbeat increments the heartbeat of the local node.
 func (t *MembershipTable) IncrementSelfHeartbeat() uint64 {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -85,7 +81,6 @@ func (t *MembershipTable) SetHeartbeat(count uint64) {
 	self.HeartbeatCount = count
 }
 
-// Merge merges incoming membership information with the local table.
 // Returns a list of changes that occurred (e.g. status changes).
 type MemberChange struct {
 	Addr   string

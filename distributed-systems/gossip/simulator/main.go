@@ -21,16 +21,15 @@ func main() {
 	peersList := flag.String("peers", "", "Comma-separated list of seed UDP peers (only in 'node' mode, e.g. '127.0.0.1:9002,127.0.0.1:9003')")
 	httpPort := flag.Int("http-port", 8080, "HTTP port for the dashboard visualizer (only in 'simulate' mode)")
 	clusterSize := flag.Int("cluster-size", 5, "Number of nodes to spawn in simulation")
-	gossipInterval := flag.Int("gossip-ms", 3000, "Gossip cycle interval in milliseconds")
-	suspectTimeout := flag.Int("suspect-ms", 9000, "Heartbeat stall threshold before suspecting a peer (milliseconds)")
-	deadTimeout := flag.Int("dead-ms", 18000, "Timeout before declaring suspected peer as dead (milliseconds)")
+	gossipInterval := flag.Int("gossip-ms", 1000, "Gossip cycle interval in milliseconds")
+	suspectTimeout := flag.Int("suspect-ms", 3000, "Heartbeat stall threshold before suspecting a peer (milliseconds)")
+	deadTimeout := flag.Int("dead-ms", 6000, "Timeout before declaring suspected peer as dead (milliseconds)")
 	fanout := flag.Int("fanout", 2, "Gossip fanout size (number of random peers to gossip to per round)")
 	enableUI := flag.Bool("ui", false, "Start visualizer dashboard on the HTTP port in standalone 'node' mode")
 	visualizerURL := flag.String("visualizer", "", "URL of remote visualizer server to send telemetry events (e.g. http://localhost:8080)")
 
 	flag.Parse()
 
-	// Configuration structures
 	nodeConfig := NodeConfig{
 		GossipInterval: time.Duration(*gossipInterval) * time.Millisecond,
 		SuspectTimeout: time.Duration(*suspectTimeout) * time.Millisecond,
@@ -48,7 +47,6 @@ func main() {
 }
 
 func runSimulation(httpPort int, clusterSize int, config NodeConfig) {
-	// Initialize the simulation controller
 	sim := NewSimulator(
 		config.GossipInterval,
 		config.SuspectTimeout,
@@ -74,7 +72,6 @@ func runSimulation(httpPort int, clusterSize int, config NodeConfig) {
 		openBrowser(url)
 	}()
 
-	// Start the embedded Web Server
 	webServer := NewWebServer(sim, httpPort)
 	if err := webServer.Start(); err != nil {
 		log.Fatalf("Failed to run Web visualizer server: %v", err)
@@ -82,14 +79,13 @@ func runSimulation(httpPort int, clusterSize int, config NodeConfig) {
 }
 
 func runStandaloneNode(port int, peersStr string, config NodeConfig, enableUI bool, httpPort int, visualizerURL string) {
-	config.Addr = fmt.Sprintf("127.0.0.1:%d", port) // bind locally
+	config.Addr = fmt.Sprintf("127.0.0.1:%d", port)
 
 	var webServer *WebServer
 	if enableUI {
 		webServer = NewWebServer(nil, httpPort)
 	}
 
-	// Output node events to console and broadcast to local/remote visualizer
 	config.OnEvent = func(ev NodeEvent) {
 		timeStr := time.UnixMilli(ev.Timestamp).Format("15:04:05.000")
 		fmt.Printf("[%s] [%s] %s\n", timeStr, ev.Type, ev.Detail)
@@ -128,7 +124,6 @@ func runStandaloneNode(port int, peersStr string, config NodeConfig, enableUI bo
 	}
 	defer node.Stop()
 
-	// Connect to initial seed peers
 	if peersStr != "" {
 		peers := strings.Split(peersStr, ",")
 		for _, peer := range peers {
@@ -139,7 +134,6 @@ func runStandaloneNode(port int, peersStr string, config NodeConfig, enableUI bo
 		}
 	}
 
-	// Interactive CLI handler
 	fmt.Printf("\nNode running on UDP %s. Commands available:\n", config.Addr)
 	fmt.Println("  set <key> <val>   - Insert or update local key-value state")
 	fmt.Println("  get <key>         - Retrieve key value from local db")
@@ -189,11 +183,11 @@ func runStandaloneNode(port int, peersStr string, config NodeConfig, enableUI bo
 			members := node.GetMembers()
 			fmt.Printf("Membership Table (%d nodes total):\n", len(members))
 			for _, m := range members {
-				statusColor := "\033[32m" // Green
+				statusColor := "\033[32m"
 				if m.Status == StatusSuspected {
-					statusColor = "\033[33m" // Yellow
+					statusColor = "\033[33m"
 				} else if m.Status == StatusDead {
-					statusColor = "\033[31m" // Red
+					statusColor = "\033[31m"
 				}
 				fmt.Printf("  - %s : %s%s\033[0m (heartbeat: %d)\n", m.Addr, statusColor, m.Status, m.HeartbeatCount)
 			}
@@ -226,7 +220,6 @@ func openBrowser(url string) {
 	_ = cmd.Run()
 }
 
-// reportEventToVisualizer sends a telemetry log event back to the visualizer web server.
 func reportEventToVisualizer(visualizerURL string, ev NodeEvent) {
 	data, err := json.Marshal(ev)
 	if err != nil {

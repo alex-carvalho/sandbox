@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-// NodeEvent represents an event happening inside a gossip node, used for visualization.
 type NodeEvent struct {
 	Timestamp int64  `json:"timestamp"`
 	Node      string `json:"node"`
@@ -21,7 +20,6 @@ type NodeEvent struct {
 	Version   uint64 `json:"version,omitempty"`
 }
 
-// NodeConfig details parameters for a gossip node.
 type NodeConfig struct {
 	Addr           string
 	GossipInterval time.Duration
@@ -31,7 +29,6 @@ type NodeConfig struct {
 	OnEvent        func(NodeEvent)
 }
 
-// Node represents a running gossip node.
 type Node struct {
 	config    NodeConfig
 	members   *MembershipTable
@@ -53,11 +50,8 @@ func NewNode(config NodeConfig, initialMembers []Member, initialState map[string
 		stopChan: make(chan struct{}),
 	}
 
-	// Populate initial state if any
-	if initialState != nil {
-		for k, v := range initialState {
-			node.state[k] = v
-		}
+	for k, v := range initialState {
+		node.state[k] = v
 	}
 
 	// Populate initial membership if any
@@ -78,7 +72,6 @@ func NewNode(config NodeConfig, initialMembers []Member, initialState map[string
 	return node, nil
 }
 
-// Start binds to the UDP port and starts the node loops.
 func (n *Node) Start() error {
 	addr, err := net.ResolveUDPAddr("udp", n.config.Addr)
 	if err != nil {
@@ -104,7 +97,6 @@ func (n *Node) Start() error {
 	return nil
 }
 
-// Stop closes connections and stops goroutines.
 func (n *Node) Stop() {
 	n.killMu.Lock()
 	if n.isKilled {
@@ -125,7 +117,6 @@ func (n *Node) Stop() {
 	})
 }
 
-// Set updates or inserts a key-value pair in the local node state.
 func (n *Node) Set(key, val string) {
 	n.stateMu.Lock()
 	v, exists := n.state[key]
@@ -149,7 +140,6 @@ func (n *Node) Set(key, val string) {
 	})
 }
 
-// Get retrieves a key value from the local node state.
 func (n *Node) Get(key string) (Value, bool) {
 	n.stateMu.RLock()
 	defer n.stateMu.RUnlock()
@@ -157,19 +147,16 @@ func (n *Node) Get(key string) (Value, bool) {
 	return val, exists
 }
 
-// GetStateSnapshot returns a copy of the entire node's state.
 func (n *Node) GetStateSnapshot() map[string]Value {
 	n.stateMu.RLock()
 	defer n.stateMu.RUnlock()
 	return n.copyState()
 }
 
-// GetMembers returns the node's current cluster view.
 func (n *Node) GetMembers() []Member {
 	return n.members.GetMembers()
 }
 
-// AddPeer manually adds a peer's address to start gossiping with it.
 func (n *Node) AddPeer(peerAddr string) {
 	n.members.Merge([]Member{
 		{
@@ -186,8 +173,6 @@ func (n *Node) AddPeer(peerAddr string) {
 		Target: peerAddr,
 	})
 }
-
-// Helpers
 
 func (n *Node) emit(ev NodeEvent) {
 	ev.Timestamp = time.Now().UnixMilli()
@@ -268,7 +253,6 @@ func (n *Node) listen() {
 				Target: msg.FromAddr,
 			})
 
-			// Merge membership list
 			changes := n.members.Merge(msg.Members, time.Now().UnixNano())
 			for _, c := range changes {
 				n.emit(NodeEvent{
@@ -278,7 +262,6 @@ func (n *Node) listen() {
 				})
 			}
 
-			// Merge key-value state
 			n.mergeState(msg.State)
 		}
 	}
@@ -289,7 +272,6 @@ func (n *Node) gossipLoop() {
 	ticker := time.NewTicker(n.config.GossipInterval)
 	defer ticker.Stop()
 
-	// Seed random number generator
 	src := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(src)
 
@@ -302,19 +284,15 @@ func (n *Node) gossipLoop() {
 				return
 			}
 
-			// Increment own heartbeat
 			n.members.IncrementSelfHeartbeat()
 
-			// Get potential communication peers
 			peers := n.members.GetActivePeers()
 			if len(peers) == 0 {
 				continue
 			}
 
-			// Select fanout random peers
 			selected := n.selectRandomPeers(peers, n.config.Fanout, r)
 
-			// Prepare packet payload
 			n.stateMu.RLock()
 			msg := GossipMessage{
 				FromAddr: n.config.Addr,
@@ -328,7 +306,6 @@ func (n *Node) gossipLoop() {
 				continue
 			}
 
-			// Send gossip packets
 			for _, peerAddrStr := range selected {
 				peerAddr, err := net.ResolveUDPAddr("udp", peerAddrStr)
 				if err != nil {

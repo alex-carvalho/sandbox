@@ -11,7 +11,6 @@ import (
 //go:embed index.html
 var indexHTML string
 
-// WebServer handles HTTP API and SSE events.
 type WebServer struct {
 	sim      *Simulator
 	node     *Node // Optional: used when visualizing a standalone single node
@@ -20,7 +19,6 @@ type WebServer struct {
 	clientMu sync.Mutex
 }
 
-// NewWebServer initializes the HTTP server wrapper.
 func NewWebServer(sim *Simulator, port int) *WebServer {
 	return &WebServer{
 		sim:     sim,
@@ -29,21 +27,17 @@ func NewWebServer(sim *Simulator, port int) *WebServer {
 	}
 }
 
-// SetNode binds a single standalone node to this web visualizer.
 func (ws *WebServer) SetNode(node *Node) {
 	ws.node = node
 }
 
-// Start launches the broadcast loop and listens for HTTP requests.
 func (ws *WebServer) Start() error {
 	ws.startBroadcast()
 
 	mux := http.NewServeMux()
 
-	// Static routes
 	mux.HandleFunc("/", ws.handleIndex)
 
-	// API routes
 	mux.HandleFunc("/api/events", ws.handleSSE)
 	mux.HandleFunc("/api/status", ws.handleStatus)
 	mux.HandleFunc("/api/kill", ws.handleKill)
@@ -71,7 +65,6 @@ func (ws *WebServer) startBroadcast() {
 	}()
 }
 
-// BroadcastEvent relays a node event to all connected SSE browser clients.
 func (ws *WebServer) BroadcastEvent(ev NodeEvent) {
 	ws.clientMu.Lock()
 	for ch := range ws.clients {
@@ -114,7 +107,6 @@ func (ws *WebServer) handleSSE(w http.ResponseWriter, r *http.Request) {
 		close(ch)
 	}()
 
-	// Flush opening event
 	_, _ = fmt.Fprintf(w, "event: open\ndata: connected\n\n")
 	flusher.Flush()
 
@@ -152,7 +144,6 @@ func (ws *WebServer) handleStatus(w http.ResponseWriter, r *http.Request) {
 			if isSelf {
 				state = selfState
 			} else {
-				// Show our replica's view of the database
 				state = selfState
 			}
 
@@ -299,7 +290,6 @@ func (ws *WebServer) handleInject(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
-// handleReportEvent processes telemetry events posted by remote standalone nodes.
 func (ws *WebServer) handleReportEvent(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	if r.Method != http.MethodPost {
