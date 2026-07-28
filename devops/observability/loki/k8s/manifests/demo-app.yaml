@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo-apps
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-generator
+  namespace: demo-apps
+  labels:
+    app: log-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: log-generator
+  template:
+    metadata:
+      labels:
+        app: log-generator
+    spec:
+      containers:
+      - name: flog
+        image: mingrammer/flog
+        args:
+        - -l
+        - -d
+        - 1s
+        - -f
+        - json

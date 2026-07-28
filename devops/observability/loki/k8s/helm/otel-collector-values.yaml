@@ -1,0 +1,24 @@
+mode: daemonset
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+
+presets:
+  logsCollection:
+    enabled: true
+  kubernetesAttributes:
+    enabled: true
+
+config:
+  exporters:
+    otlphttp/loki:
+      endpoint: "http://loki-gateway.observability.svc.cluster.local/otlp"
+      tls:
+        insecure: true
+  
+  service:
+    pipelines:
+      logs:
+        receivers: [filelog]
+        processors: [k8s_attributes, batch]
+        exporters: [otlphttp/loki]

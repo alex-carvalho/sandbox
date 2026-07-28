@@ -1,0 +1,27 @@
+adminPassword: admin
+
+image:
+  repository: grafana/grafana
+  tag: 13.1.0
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki-gateway.observability.svc.cluster.local
+      uid: Loki
+      jsonData:
+        maxLines: 1000
+
+sidecar:
+  dashboards:
+    enabled: true
+    label: grafana_dashboard
+    labelValue: "1"
+    searchNamespace: ALL
+
+plugins:
+  - grafana-lokioperational-app
