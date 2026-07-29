@@ -10,3 +10,5 @@ general_settings:
 
 environment_variables:
   AWS_BEARER_TOKEN_BEDROCK: "xxxx"
+  UI_USERNAME: admin
+  UI_PASSWORD: admin
