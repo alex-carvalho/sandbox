@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keda-consumer
+  namespace: keda-poc
+  labels:
+    app: keda-consumer
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: keda-consumer
+  template:
+    metadata:
+      labels:
+        app: keda-consumer
+    spec:
+      containers:
+      - name: consumer
+        image: redis:7-alpine
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Starting KEDA consumer on worker: $HOSTNAME"
+          while true; do
+            # BLPOP blocks up to 2 seconds waiting for a message
+            MSG=$(redis-cli -h redis.common.svc.cluster.local blpop keda-queue 2 | tail -n 1)
+            if [ -n "$MSG" ] && [ "$MSG" != "timeout" ]; then
+              echo "[$(date +%T)] Worker $HOSTNAME processed: $MSG"
+              sleep 0.8
+            fi
+          done
+        resources:
+          requests:
+            cpu: 20m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi

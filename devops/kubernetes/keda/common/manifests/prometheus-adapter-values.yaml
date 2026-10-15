@@ -1,0 +1,17 @@
+prometheus:
+  url: http://prometheus-server.monitoring.svc
+  port: 80
+
+rules:
+  default: false
+  custom:
+  - seriesQuery: '{__name__="redis_key_size",key="hpa-prometheus-queue"}'
+    resources:
+      template: "<<.Resource>>"
+      overrides:
+        namespace: {resource: "namespace"}
+        service: {resource: "service"}
+    name:
+      matches: ".*"
+      as: "hpa_prometheus_queue_length"
+    metricsQuery: 'max(redis_key_size{key="hpa-prometheus-queue"}) by (<<.GroupBy>>) or on(<<.GroupBy>>) (0 * max(redis_up) by (<<.GroupBy>>))'

@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hpa-consumer
+  namespace: hpa-poc
+  labels:
+    app: hpa-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hpa-consumer
+  template:
+    metadata:
+      labels:
+        app: hpa-consumer
+    spec:
+      containers:
+      - name: consumer
+        image: redis:7-alpine
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Starting HPA consumer on worker: $HOSTNAME"
+          while true; do
+            # BLPOP blocks up to 2 seconds waiting for a message
+            MSG=$(redis-cli -h redis.common.svc.cluster.local blpop hpa-prometheus-queue 2 | tail -n 1)
+            if [ -n "$MSG" ] && [ "$MSG" != "timeout" ]; then
+              echo "[$(date +%T)] Worker $HOSTNAME processed: $MSG"
+              sleep 0.8
+            fi
+          done
+        resources:
+          requests:
+            cpu: 20m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: hpa-poc
+  labels:
+    app: redis
+spec:
+  type: ExternalName
+  externalName: redis.common.svc.cluster.local
+  ports:
+  - port: 6379
+    name: redis
+  - port: 9121
+    name: metrics

@@ -1,0 +1,35 @@
+server:
+  global:
+    scrape_interval: 5s
+    scrape_timeout: 4s
+  persistentVolume:
+    enabled: false
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+extraScrapeConfigs: |
+  - job_name: 'redis-exporter'
+    scrape_interval: 5s
+    scrape_timeout: 4s
+    static_configs:
+      - targets: ['redis.common.svc.cluster.local:9121']
+        labels:
+          namespace: 'hpa-poc'
+          service: 'redis'
+
+alertmanager:
+  enabled: false
+
+pushgateway:
+  enabled: false
+
+nodeExporter:
+  enabled: false
+
+kubeStateMetrics:
+  enabled: false
