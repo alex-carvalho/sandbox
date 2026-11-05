@@ -9,7 +9,7 @@
 * Single Rust container on `:4566`
 
 ```shell
-docker run -d \
+docker run --rm \
   --name robotocore \
   -p 4566:4566 \
   ghcr.io/robotocore/robotocore:latest
