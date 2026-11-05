@@ -6,19 +6,17 @@
 
 ## 1. Start RobotoCore
 
-* Single container on `:4566`
-* `ENFORCE_IAM=1` enables real-time IAM policy evaluation
+* Single Rust container on `:4566`
 
 ```shell
 docker run -d \
   --name robotocore \
   -p 4566:4566 \
-  -e ENFORCE_IAM=1 \
   ghcr.io/robotocore/robotocore:latest
 ```
 
 ```shell
-curl -s http://localhost:4566/_robotocore/health
+curl -s http://localhost:4566/_robotocore/health | python3 -m json.tool
 ```
 
 ---
@@ -30,7 +28,7 @@ curl -s http://localhost:4566/_robotocore/health
   * **S3**: `robotocore-poc-bucket`
   * **SQS**: `robotocore-poc-queue` + `robotocore-poc-dlq`
   * **RDS**: `robotocore-poc-db` (PostgreSQL `15.4` control plane)
-  * **IAM**: `robotocore-poc-role` + `robotocore-poc-policy` (Allow S3/SQS/RDS, explicit **Deny** on delete bucket/queue)
+  * **IAM**: `robotocore-poc-role` + `robotocore-poc-policy` + attachment
 
 ```shell
 terraform init
@@ -124,7 +122,7 @@ aws sqs receive-message --queue-url "$QUEUE_URL" --max-number-of-messages 1
 ## 6. RDS — Control Plane Emulation
 
 * Instant RDS metadata & endpoint (no 10-minute cloud wait)
-* *Trade-off*: Control-plane & Data API in memory (no Postgres Docker sidecar)
+* *Trade-off*: Emulates control plane in memory (no Postgres Docker sidecar)
 
 ```shell
 aws rds describe-db-instances \
@@ -135,7 +133,7 @@ aws rds describe-db-instances \
 
 ---
 
-## 7. IAM, STS & Runtime Enforcement (`ENFORCE_IAM=1`)
+## 7. IAM, STS & Validation Behavior
 
 * Inspect IAM policy attached by Terraform
 
@@ -152,40 +150,17 @@ aws iam get-policy-version \
   --output json
 ```
 
-* Assume role via **STS** to get temporary credentials
+* Assume role via **STS** (`AssumeRole`)
 
 ```shell
 ROLE_ARN=$(aws iam get-role --role-name robotocore-poc-role --query 'Role.Arn' --output text)
 
-ASSUME_JSON=$(aws sts assume-role \
+aws sts assume-role \
   --role-arn "$ROLE_ARN" \
-  --role-session-name "demo-session" \
-  --output json)
-
-echo "$ASSUME_JSON" | python3 -m json.tool
+  --role-session-name "demo-session"
 ```
 
-* Test **Allowed** (`s3:ListBucket`) vs **Explicitly Denied** (`s3:DeleteBucket` → `AccessDenied`)
-
-```shell
-ROLE_AK=$(echo "$ASSUME_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin)['Credentials']['AccessKeyId'])")
-ROLE_SK=$(echo "$ASSUME_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin)['Credentials']['SecretAccessKey'])")
-ROLE_ST=$(echo "$ASSUME_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin)['Credentials']['SessionToken'])")
-
-# Allowed by policy
-AWS_ACCESS_KEY_ID="$ROLE_AK" AWS_SECRET_ACCESS_KEY="$ROLE_SK" AWS_SESSION_TOKEN="$ROLE_ST" \
-  aws s3 ls s3://robotocore-poc-bucket
-
-# Blocked by ENFORCE_IAM=1 (Explicit Deny)
-AWS_ACCESS_KEY_ID="$ROLE_AK" AWS_SECRET_ACCESS_KEY="$ROLE_SK" AWS_SESSION_TOKEN="$ROLE_ST" \
-  aws s3api delete-bucket --bucket robotocore-poc-bucket
-```
-
----
-
-## 8. Validation: State Conflicts vs. Policy Syntax
-
-* **State Conflict (`EntityAlreadyExists`)**: Enforced by RobotoCore
+* Test duplicate state conflict (`EntityAlreadyExists`)
 
 ```shell
 aws iam create-role \
@@ -193,9 +168,36 @@ aws iam create-role \
   --assume-role-policy-document '{"Version":"2012-10-17","Statement":[]}'
 ```
 
-* **Policy Schema Validation**:
-  * RobotoCore stores `PolicyDocument` as raw string on `CreatePolicy` and evaluates at **runtime** (`ENFORCE_IAM=1`).
-  * Creation-time syntax checks are enforced by **Terraform** (`data "aws_iam_policy_document"`).
+---
+
+## 8. Platform Features: Chaos, Snapshots & Audit Log
+
+* **Chaos Engineering**: Inject a `503 ServiceUnavailableException` fault on S3, trigger it with `aws s3 ls`, then clear the rule
+
+```shell
+curl -s -X POST http://localhost:4566/_robotocore/chaos/rules \
+  -d '{"service":"s3","operation":"ListBuckets","error_code":"ServiceUnavailableException","status_code":503}' | python3 -m json.tool
+
+# S3 now fails with our injected 503 fault!
+aws s3 ls
+
+# Clear chaos rules and verify S3 recovers
+curl -s -X POST http://localhost:4566/_robotocore/chaos/rules/clear | python3 -m json.tool
+aws s3 ls
+```
+
+* **State Snapshots**: Save a named checkpoint and list snapshots
+
+```shell
+curl -s -X POST http://localhost:4566/_robotocore/state/save -d '{"name": "demo-checkpoint"}' | python3 -m json.tool
+curl -s http://localhost:4566/_robotocore/state/snapshots | python3 -m json.tool
+```
+
+* **Audit Log**: Inspect recent API requests recorded by the gateway
+
+```shell
+curl -s http://localhost:4566/_robotocore/audit | python3 -m json.tool | head -n 35
+```
 
 ---
 

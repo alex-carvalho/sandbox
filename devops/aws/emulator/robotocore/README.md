@@ -1,4 +1,9 @@
-# RobotoCore & The Local AWS Alternative
+# RobotoCore & The Local AWS Landscape
+
+> **100% Free, MIT-Licensed Local AWS Digital Twin (Written in Rust)**
+> **160 Services** · **10,100+ API Operations (~96% coverage)** · **Port `4566`**
+
+---
 
 <br>
 
@@ -32,48 +37,59 @@
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
-│          Docker Container / Rust Binary (:4566)          │
+│                 Rust Server (port 4566)                  │
 │                                                          │
 │  ┌────────────────────────────────────────────────────┐  │
-│  │             Axum + Tokio Gateway (Rust)            │  │
-│  │  Request Router (Auth header, X-Amz-Target, Path)  │  │
-│  │  Account ID Extractor (12-digit AWS Access Key)    │  │
-│  └─────────────────────────┬──────────────────────────┘  │
-│                            │                             │
-│                            ▼                             │
-│  ┌────────────────────────────────────────────────────┐  │
-│  │          rotocore Native Rust Engine               │  │
-│  │  • Per-service in-process Rust crates (160+ svcs)  │  │
-│  │  • Native SigV4, IAM evaluation, SQS, Lambda       │  │
-│  │  • Isolated in-memory state per Account & Region   │  │
-│  └────────────────────────────────────────────────────┘  │
+│  │        Request Router & Axum Gateway (src/core/)   │  │
+│  │  • Protocol layer (query / json / rest-xml / ec2)  │  │
+│  │  • Account ID Extractor (12-digit AWS Access Key)  │  │
+│  └──────────────┬──────────────────────┬──────────────┘  │
+│                 │                      │                 │
+│                 ▼                      ▼                 │
+│  ┌─────────────────────────┐  ┌───────────────────────┐  │
+│  │  Core Service Crates    │  │    rotocore Crate     │  │
+│  │  (s3, sqs, sts, lambda, │  │  ("Moto in Rust" —    │  │
+│  │   dynamodb, ...)        │  │   139 service mods)   │  │
+│  └──────────────┬──────────┘  └───────────┬───────────┘  │
+│                 │                         │              │
+│                 ▼                         ▼              │
+│      In-Memory Stores (Isolated per Account & Region)    │
 └──────────────────────────────────────────────────────────┘
 ```
 
-* **Evolution** — Evolved from an early Python (Starlette + Moto) prototype into a standalone compiled **Rust** binary (Python is now only used for the `boto3`/`pytest` test suite).
-* **Axum Gateway** — Parses `Authorization`, `X-Amz-Target`, path, or `Host` headers at native speed.
+* **Pure Rust Binary** — The old Python server and vendored Moto backend were completely replaced by `src/core/` + `rotocore/`.
+* **Axum Gateway** — Parses `Authorization`, `X-Amz-Target`, URL patterns, sign scopes, and S3 virtual hosts.
 * **Multi-Account Isolation** — Treats any 12-digit `AWS_ACCESS_KEY_ID` as an isolated AWS Account ID.
-* **`rotocore` Engine** — Clean-room Rust reimplementation of Moto's service layer running completely in-process.
+* **Strict `501 NotImplemented` Contract** — Unimplemented operations return `501 NotImplemented` instead of silent fake successes.
 
 ---
 
 <br>
 
-## 4. State & Snapshots (`/_robotocore/state`)
+## 4. Platform Features (`/_robotocore/*`)
 
-* **Pure In-Memory by Default** — No continuous disk writes or embedded DB overhead.
-* **On-Demand Checkpoints** — Free equivalent to LocalStack *Cloud Pods* for saving and resetting test state without re-running `terraform apply`:
+Verified endpoints implemented in [`src/core/server.rs`](https://github.com/robotocore/robotocore/blob/main/src/core/server.rs):
+
+* **Chaos Engineering (`/_robotocore/chaos/rules`)** — Inject latency (`latency_ms`), throttling (`429`), or HTTP faults (`500`/`503`) by service, operation regex, region, account, and probability.
+* **State Snapshots & Export (`/_robotocore/state/*`)** — Save (`save`), restore (`load`), list (`snapshots`), export/import JSON (`export`/`import`), or wipe (`reset`) in-memory state.
+* **API Audit Log & Error Tracking (`/_robotocore/audit`, `/usage/errors`)** — In-memory ring buffer of every API call, status code, and error.
+* **Service Posture & Runtimes (`/_robotocore/services`, `/runtimes`)** — Query all 160 registered services and available Lambda runtimes.
+* **Multi-Account Isolation** — Any 12-digit `AWS_ACCESS_KEY_ID` maps to its own isolated AWS Account state.
 
 ```shell
-# Save current in-memory AWS state
-curl -X POST http://localhost:4566/_robotocore/state/save \
-  -H "Content-Type: application/json" \
-  -d '{"name": "after-terraform"}'
+# Chaos: Inject 503 error on S3 ListBuckets, then clear rules
+curl -X POST http://localhost:4566/_robotocore/chaos/rules \
+  -d '{"service":"s3","operation":"ListBuckets","error_code":"ServiceUnavailableException","status_code":503}'
+curl -X POST http://localhost:4566/_robotocore/chaos/rules/clear
 
-# Instantly restore / rollback to saved state
-curl -X POST http://localhost:4566/_robotocore/state/load \
-  -H "Content-Type: application/json" \
-  -d '{"name": "after-terraform"}'
+# State: Save, list, and restore named snapshots
+curl -X POST http://localhost:4566/_robotocore/state/save -d '{"name": "after-tf"}'
+curl -s http://localhost:4566/_robotocore/state/snapshots
+curl -X POST http://localhost:4566/_robotocore/state/load -d '{"name": "after-tf"}'
+
+# Introspection: Audit log, usage errors, and service catalog
+curl -s http://localhost:4566/_robotocore/audit
+curl -s http://localhost:4566/_robotocore/services
 ```
 
 ---
@@ -83,7 +99,7 @@ curl -X POST http://localhost:4566/_robotocore/state/load \
 ## 5. Live Demo (`Terraform` + `AWS CLI`)
 
 * **Provision (`main.tf`)**: S3 Bucket + SQS Queue/DLQ + RDS Postgres + IAM Role/Policy
-* **Manipulate (`AWS CLI`)**: Upload/download S3, send/receive SQS, inspect RDS, test `ENFORCE_IAM=1`
+* **Manipulate (`AWS CLI` & `/_robotocore/*`)**: S3, SQS, RDS, IAM/STS, Chaos Injection, and Snapshots
 
 ### 👉 **[Start Live Demo (`DEMO.md`)](./DEMO.md)**
 
@@ -95,10 +111,10 @@ curl -X POST http://localhost:4566/_robotocore/state/load \
 
 | ✅ Pros | ⚠️ Cons |
 | :--- | :--- |
-| **100% Free & MIT** — No paywalls or token lock-in | **Ephemeral RAM State** — Resets on container restart (supports snapshots) |
-| **Rust Performance** — Compiled binary, no Python/JVM overhead | **No DB Sidecars** — Emulates RDS control plane & Data API, not a live Postgres/MySQL engine |
-| **Broadest Coverage** — 160+ services / 10,100+ ops | **Policy Syntax on Create** — Stores raw policy JSON on `CreatePolicy`; evaluates at runtime |
-| **Runtime IAM (`ENFORCE_IAM=1`)** — Included for free | **Younger Ecosystem** — Newer community than legacy tools |
+| **100% Free & MIT** — No paywalls or token lock-in | **Ephemeral RAM State** — Resets on container restart (unless snapshotted/exported) |
+| **Rust Performance** — Compiled binary, zero Python/JVM overhead | **No DB Sidecars** — Emulates RDS control plane & Data API, not a live Postgres/MySQL engine |
+| **Broadest Coverage** — 160 services registered in-process | **IAM Control Plane Only** — Stores IAM policies/roles & STS sessions, but does not enforce IAM permissions or validate policy syntax in the Rust gateway yet |
+| **Built-in Chaos & Snapshots** — Free `/_robotocore/chaos/*` & `/state/*` APIs | **Younger Ecosystem** — Active Rust port with evolving parity |
 
 ---
 
@@ -108,9 +124,10 @@ curl -X POST http://localhost:4566/_robotocore/state/load \
 
 | Dimension | **RobotoCore** | **Floci** | **MiniStack** |
 | :--- | :--- | :--- | :--- |
-| **Services** | **160+ services** (~10,100+ ops) | **133+ services** | **60+ services** |
-| **Stack** | **Rust** (`Axum` + `rotocore` engine) | **Java** (Quarkus / Vert.x) | **Python 3.13** (ASGI / Hypercorn) |
+| **Services** | **160 services** (~96% ops) | **133+ services** | **60+ services** |
+| **Stack** | **Native Rust** (`Axum` + `rotocore` engine) | **Java + GraalVM Native** (Quarkus / Vert.x) | **Python 3.13** (ASGI / Hypercorn) |
 | **DB & Sidecars** | In-memory control plane + RDS Data API | Launches real Docker sidecars (Postgres, MySQL, Redis, k3s) | Launches real Docker sidecars (Postgres, MySQL, Redis) |
 | **Footprint** | Native Rust binary, fast boot & low RAM | **~24 ms startup**, ~13 MiB RAM | **< 2s startup**, ~30 MB RAM (`pip install ministack`) |
-| **Persistence** | In-memory + Snapshots | Memory, Persistent, Hybrid, WAL | In-memory & Volume/S3 (`RDS_PERSIST=1`) |
+| **Persistence** | In-memory + Snapshots (`save`/`load`/`export`) | Memory, Persistent, Hybrid, WAL | In-memory & Volume/S3 (`RDS_PERSIST=1`) |
+| **Chaos / Fault Injection** | **Yes** (`/_robotocore/chaos/rules` API) | **No** (Open feature request `#4623`) | **No** |
 | **License** | MIT | MIT | MIT |
