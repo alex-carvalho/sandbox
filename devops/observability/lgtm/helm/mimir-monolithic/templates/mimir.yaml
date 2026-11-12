@@ -1,0 +1,144 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  namespace: {{ .Release.Namespace }}
+data:
+  mimir.yaml: |
+    multitenancy_enabled: false
+    target: all
+
+    server:
+      http_listen_port: 8080
+      grpc_listen_port: 9095
+      log_level: info
+
+    common:
+      storage:
+        backend: filesystem
+        filesystem:
+          dir: /data/mimir
+
+    blocks_storage:
+      backend: filesystem
+      filesystem:
+        dir: /data/mimir/tsdb
+      tsdb:
+        dir: /data/mimir/tsdb-sync
+
+    compactor:
+      data_dir: /data/mimir/compactor
+      sharding_ring:
+        kvstore:
+          store: memberlist
+
+    distributor:
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: memberlist
+
+    ingester:
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: memberlist
+        replication_factor: 1
+
+    store_gateway:
+      sharding_ring:
+        replication_factor: 1
+        kvstore:
+          store: memberlist
+
+    ruler_storage:
+      backend: filesystem
+      filesystem:
+        dir: /data/mimir/rules
+
+    limits:
+      # Enable Exemplar storage for Metrics -> Traces correlation
+      max_global_exemplars_per_user: {{ .Values.limits.maxGlobalExemplarsPerUser | default 100000 }}
+      ingestion_rate: 100000
+      ingestion_burst_size: 200000
+      max_global_series_per_user: 0
+      out_of_order_time_window: 30m
+      native_histograms_ingestion_enabled: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mimir
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: mimir
+spec:
+  type: ClusterIP
+  ports:
+    - name: http-metrics
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: grpc
+      port: 9095
+      targetPort: 9095
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: mimir
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mimir
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: mimir
+spec:
+  serviceName: mimir
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mimir
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mimir
+    spec:
+      containers:
+        - name: mimir
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          args:
+            - "-config.file=/etc/mimir/mimir.yaml"
+            - "-target=all"
+          ports:
+            - name: http-metrics
+              containerPort: 8080
+            - name: grpc
+              containerPort: 9095
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/mimir
+            - name: storage
+              mountPath: /data
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Release.Name }}-config
+  volumeClaimTemplates:
+    - metadata:
+        name: storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size | default "5Gi" }}
+

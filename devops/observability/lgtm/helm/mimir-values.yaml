@@ -1,0 +1,21 @@
+# Values for Grafana Mimir (Single-Binary Monolithic mode for Kind POC)
+image:
+  repository: grafana/mimir
+  tag: "2.17.0"
+
+persistence:
+  enabled: true
+  size: 5Gi
+
+limits:
+  # Required for storing OpenTelemetry Histogram Exemplars (Metrics -> Traces)
+  maxGlobalExemplarsPerUser: 100000
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+

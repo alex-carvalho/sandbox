@@ -1,0 +1,117 @@
+# Continuous Traffic Generator (Node.js) controlled via loan-frontend UI (/api/load/status)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loan-traffic-gen
+  namespace: loan-app
+  labels:
+    app: loan-traffic-gen
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loan-traffic-gen
+  template:
+    metadata:
+      labels:
+        app: loan-traffic-gen
+    spec:
+      containers:
+        - name: traffic-gen
+          image: loan-frontend:local
+          imagePullPolicy: IfNotPresent
+          command:
+            - node
+            - -e
+            - |
+              const BASE_URL = "http://loan-frontend.loan-app.svc.cluster.local:8080";
+              const APPLY_URL = `${BASE_URL}/api/loans/apply`;
+              const HISTORY_URL = `${BASE_URL}/api/loans/history`;
+              const STATUS_URL = `${BASE_URL}/api/load/status`;
+              const CONTROL_URL = `${BASE_URL}/api/load/control`;
+
+              const SCENARIOS = [
+                // 1. Approved Home Mortgage (Normal fast path)
+                { weight: 0.32, data: { applicant_name: "Elena Rostova", loan_type: "home", amount: 320000, term_months: 360, annual_income: 165000, credit_score: 780, simulate_mode: "normal" } },
+                // 2. Approved Auto Loan (Normal fast path)
+                { weight: 0.24, data: { applicant_name: "Marcus Vance", loan_type: "auto", amount: 34000, term_months: 60, annual_income: 95000, credit_score: 730, simulate_mode: "normal" } },
+                // 3. Manual Review Small Business Loan
+                { weight: 0.14, data: { applicant_name: "Priya Patel", loan_type: "business", amount: 180000, term_months: 120, annual_income: 110000, credit_score: 635, simulate_mode: "normal" } },
+                // 4. Rejected Personal Loan (Low score / high DTI)
+                { weight: 0.10, data: { applicant_name: "Devon Brooks", loan_type: "personal", amount: 45000, term_months: 36, annual_income: 42000, credit_score: 540, simulate_mode: "normal" } },
+                // 5. Slow PostgreSQL Query (>900k triggers pg_sleep(0.85) analytical query)
+                { weight: 0.08, data: { applicant_name: "Sofia Chen (High Value)", loan_type: "home", amount: 960000, term_months: 360, annual_income: 310000, credit_score: 775, simulate_mode: "slow_db" } },
+                // 6. Fraud Blacklist Error (403 Forbidden from loan-underwriting + Postgres fraud_blacklist)
+                { weight: 0.05, data: { applicant_name: "Victor Fraud Ring", loan_type: "personal", amount: 60000, term_months: 48, annual_income: 88000, credit_score: 690, simulate_mode: "fraud_error" } },
+                // 7. Credit Bureau Timeout (504 Gateway Timeout from loan-underwriting)
+                { weight: 0.04, data: { applicant_name: "Liam O'Connor", loan_type: "auto", amount: 28000, term_months: 48, annual_income: 78000, credit_score: 415, simulate_mode: "bureau_timeout" } },
+                // 8. PostgreSQL Constraint Violation Error (500 Internal Server Error in loan-backend)
+                { weight: 0.03, data: { applicant_name: "Bad SQL Payload", loan_type: "business", amount: 666, term_months: 60, annual_income: 120000, credit_score: 710, simulate_mode: "db_error" } },
+              ];
+
+              function pickScenario() {
+                const r = Math.random();
+                let acc = 0;
+                for (const item of SCENARIOS) {
+                  acc += item.weight;
+                  if (r <= acc) return { ...item.data };
+                }
+                return { ...SCENARIOS[0].data };
+              }
+
+              async function loop() {
+                console.log("Starting UI-controllable loan traffic generator...");
+                let step = 0;
+                while (true) {
+                  let waitMs = 2000;
+                  try {
+                    const stRes = await fetch(STATUS_URL);
+                    const st = await stRes.json();
+                    waitMs = st.interval_ms || 2000;
+
+                    if (!st.enabled) {
+                      await new Promise((r) => setTimeout(r, 1000));
+                      continue;
+                    }
+
+                    step++;
+                    const payload = pickScenario();
+                    if (payload.simulate_mode !== "db_error" && payload.simulate_mode !== "slow_db") {
+                      payload.amount = Math.round(payload.amount * (0.9 + Math.random() * 0.2));
+                    }
+
+                    const res = await fetch(APPLY_URL, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(payload),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    console.log(`[${res.status}] mode=${payload.simulate_mode} decision=${data.decision} trace=${data.trace_id}`);
+
+                    await fetch(CONTROL_URL, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        record_sent: true,
+                        last_scenario: payload.simulate_mode,
+                        last_decision: data.decision || String(res.status),
+                      }),
+                    });
+
+                    if (step % 4 === 0) {
+                      await fetch(HISTORY_URL);
+                    }
+                  } catch (err) {
+                    console.error("Traffic generator error:", err.message);
+                  }
+                  await new Promise((r) => setTimeout(r, waitMs));
+                }
+              }
+              loop();
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi

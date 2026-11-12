@@ -1,0 +1,116 @@
+# Values for grafana/grafana Helm chart with full LGTM cross-signal correlations
+replicas: 1
+
+adminUser: admin
+adminPassword: admin
+
+# Expose on NodePort 30300 -> mapped to localhost:3000 by Kind cluster-config.yaml
+service:
+  type: NodePort
+  port: 80
+  nodePort: 30300
+
+# Enable anonymous Viewer/Admin access for frictionless local POC exploration
+grafana.ini:
+  auth.anonymous:
+    enabled: true
+    org_name: Main Org.
+    org_role: Admin
+  feature_toggles:
+    enable: traceqlEditor correlations metricsSummary
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      # 1. Grafana Mimir (Metrics + Exemplars -> Tempo)
+      - name: Mimir
+        uid: mimir
+        type: prometheus
+        access: proxy
+        url: http://mimir.observability.svc.cluster.local:8080/prometheus
+        isDefault: true
+        editable: true
+        jsonData:
+          httpMethod: POST
+          timeInterval: "5s"
+          exemplarTraceIdDestinations:
+            - name: trace_id
+              datasourceUid: tempo
+            - name: traceID
+              datasourceUid: tempo
+
+      # 2. Grafana Loki (Logs -> Tempo via derivedFields)
+      - name: Loki
+        uid: loki
+        type: loki
+        access: proxy
+        url: http://loki.observability.svc.cluster.local:3100
+        editable: true
+        jsonData:
+          maxLines: 1000
+          derivedFields:
+            - name: TraceID
+              matcherRegex: '"trace_id":\s*"([a-fA-F0-9]{32})"'
+              url: "$${__value.raw}"
+              datasourceUid: tempo
+              urlDisplayLabel: "View Trace in Tempo"
+
+      # 3. Grafana Tempo (Traces -> Logs in Loki, Traces -> Metrics & Service Graph in Mimir)
+      - name: Tempo
+        uid: tempo
+        type: tempo
+        access: proxy
+        url: http://tempo.observability.svc.cluster.local:3200
+        editable: true
+        jsonData:
+          httpMethod: GET
+          nodeGraph:
+            enabled: true
+          serviceMap:
+            datasourceUid: mimir
+          search:
+            hide: false
+          lokiSearch:
+            datasourceUid: loki
+          tracesToLogsV2:
+            datasourceUid: loki
+            spanStartTimeShift: "-1m"
+            spanEndTimeShift: "1m"
+            filterByTraceID: false
+            filterBySpanID: false
+            customQuery: true
+            query: '{$${__tags}} | json | trace_id="$${__trace.traceId}"'
+            tags:
+              - key: service.name
+                value: service_name
+          tracesToMetrics:
+            datasourceUid: mimir
+            spanStartTimeShift: "-5m"
+            spanEndTimeShift: "5m"
+            tags:
+              - key: service.name
+                value: service
+            queries:
+              - name: "Request Rate (Span Metrics)"
+                query: 'sum(rate(traces_spanmetrics_calls_total{$${__tags}}[1m]))'
+              - name: "Error Rate (Span Metrics)"
+                query: 'sum(rate(traces_spanmetrics_calls_total{$${__tags}, status_code="STATUS_CODE_ERROR"}[1m]))'
+              - name: "P95 Latency (Span Metrics)"
+                query: 'histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{$${__tags}}[1m])) by (le))'
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: "default"
+        orgId: 1
+        folder: "Loan LGTM POC"
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+
+dashboardsConfigMaps:
+  default: "loan-observability-dashboards"

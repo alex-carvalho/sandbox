@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loan-backend
+  namespace: loan-app
+  labels:
+    app: loan-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loan-backend
+  template:
+    metadata:
+      labels:
+        app: loan-backend
+    spec:
+      containers:
+        - name: loan-backend
+          image: loan-backend:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+              name: http
+          env:
+            - name: PORT
+              value: "8081"
+            - name: DATABASE_URL
+              value: "postgres://loanuser:loanpass@postgres.loan-app.svc.cluster.local:5432/loandb?sslmode=disable"
+            - name: UNDERWRITING_URL
+              value: "http://loan-underwriting.loan-app.svc.cluster.local:8082"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "alloy.observability.svc.cluster.local:4317"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loan-backend
+  namespace: loan-app
+  labels:
+    app: loan-backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081
+  selector:
+    app: loan-backend

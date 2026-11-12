@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loan-underwriting
+  namespace: loan-app
+  labels:
+    app: loan-underwriting
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loan-underwriting
+  template:
+    metadata:
+      labels:
+        app: loan-underwriting
+    spec:
+      containers:
+        - name: loan-underwriting
+          image: loan-underwriting:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+              name: http
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://loanuser:loanpass@postgres.loan-app.svc.cluster.local:5432/loandb"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://alloy.observability.svc.cluster.local:4317"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8082
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loan-underwriting
+  namespace: loan-app
+  labels:
+    app: loan-underwriting
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8082
+      targetPort: 8082
+  selector:
+    app: loan-underwriting

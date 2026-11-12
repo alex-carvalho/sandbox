@@ -1,0 +1,153 @@
+# Values for grafana/alloy Helm chart
+controller:
+  type: deployment
+  replicas: 1
+
+service:
+  enabled: true
+  type: ClusterIP
+
+alloy:
+  stabilityLevel: "generally-available"
+  extraPorts:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+      protocol: TCP
+
+  configMap:
+    create: true
+    content: |
+      logging {
+        level  = "info"
+        format = "logfmt"
+      }
+
+      // -----------------------------------------------------------------------
+      // 1. OTLP Receiver (Traces, Metrics, Logs from Loan Microservices)
+      // -----------------------------------------------------------------------
+      otelcol.receiver.otlp "default" {
+        grpc {
+          endpoint = "0.0.0.0:4317"
+        }
+        http {
+          endpoint = "0.0.0.0:4318"
+        }
+
+        output {
+          metrics = [otelcol.processor.k8sattributes.default.input]
+          logs    = [otelcol.processor.k8sattributes.default.input]
+          traces  = [otelcol.processor.k8sattributes.default.input]
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 2. Kubernetes Metadata Enrichment & Batching
+      // -----------------------------------------------------------------------
+      otelcol.processor.k8sattributes "default" {
+        extract {
+          metadata = [
+            "k8s.namespace.name",
+            "k8s.pod.name",
+            "k8s.deployment.name",
+            "k8s.node.name",
+          ]
+        }
+        pod_association {
+          source {
+            from = "connection"
+          }
+        }
+
+        output {
+          metrics = [otelcol.processor.transform.default.input]
+          logs    = [otelcol.processor.transform.default.input]
+          traces  = [otelcol.processor.batch.default.input]
+        }
+      }
+
+      // Ensure service.name and k8s.namespace.name become Loki stream labels
+      otelcol.processor.transform "default" {
+        error_mode = "ignore"
+
+        log_statements {
+          context = "resource"
+          statements = [
+            `set(attributes["loki.resource.labels"], "service.name, service.namespace, k8s.namespace.name, k8s.pod.name")`,
+          ]
+        }
+
+        output {
+          metrics = [otelcol.processor.batch.default.input]
+          logs    = [otelcol.processor.batch.default.input]
+        }
+      }
+
+      otelcol.processor.batch "default" {
+        send_batch_size = 512
+        timeout         = "2s"
+
+        output {
+          metrics = [otelcol.exporter.prometheus.default.input]
+          logs    = [otelcol.exporter.loki.default.input]
+          traces  = [otelcol.exporter.otlp.tempo.input]
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 3. Exporters -> Tempo (Traces), Mimir (Metrics + Exemplars), Loki (Logs)
+      // -----------------------------------------------------------------------
+
+      // Traces -> Grafana Tempo via OTLP gRPC
+      otelcol.exporter.otlp "tempo" {
+        client {
+          endpoint = "tempo.observability.svc.cluster.local:4317"
+          tls {
+            insecure             = true
+            insecure_skip_verify = true
+          }
+        }
+      }
+
+      // Metrics -> Prometheus Converter -> Grafana Mimir Remote Write (with Exemplars)
+      otelcol.exporter.prometheus "default" {
+        add_metric_suffixes = true
+        resource_to_telemetry_conversion = true
+        forward_to = [prometheus.remote_write.mimir.receiver]
+      }
+
+      prometheus.remote_write "mimir" {
+        endpoint {
+          url            = "http://mimir.observability.svc.cluster.local:8080/api/v1/push"
+          send_exemplars = true
+        }
+      }
+
+      // Logs -> Unwrap OTLP JSON wrapper so Loki stores raw JSON with top-level trace_id
+      otelcol.exporter.loki "default" {
+        forward_to = [loki.process.default.receiver]
+      }
+
+      loki.process "default" {
+        stage.json {
+          expressions = {
+            body = "body",
+          }
+        }
+
+        stage.output {
+          source = "body"
+        }
+
+        forward_to = [loki.write.default.receiver]
+      }
+
+      loki.write "default" {
+        endpoint {
+          url = "http://loki.observability.svc.cluster.local:3100/loki/api/v1/push"
+        }
+      }

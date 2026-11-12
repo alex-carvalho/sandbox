@@ -1,0 +1,7 @@
+apiVersion: v2
+name: mimir-monolithic
+description: Lightweight Single-Binary Grafana Mimir Helm Chart for Local Kubernetes POC
+type: application
+version: 0.1.0
+appVersion: "2.17.0"
+

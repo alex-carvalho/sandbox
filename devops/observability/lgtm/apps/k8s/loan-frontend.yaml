@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loan-frontend
+  namespace: loan-app
+  labels:
+    app: loan-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loan-frontend
+  template:
+    metadata:
+      labels:
+        app: loan-frontend
+    spec:
+      containers:
+        - name: loan-frontend
+          image: loan-frontend:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: LOAN_BACKEND_URL
+              value: "http://loan-backend.loan-app.svc.cluster.local:8081"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://alloy.observability.svc.cluster.local:4317"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loan-frontend
+  namespace: loan-app
+  labels:
+    app: loan-frontend
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      nodePort: 30080
+  selector:
+    app: loan-frontend
+

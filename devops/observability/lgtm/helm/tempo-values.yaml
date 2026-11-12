@@ -1,0 +1,57 @@
+# Values for grafana/tempo Helm chart (Single-Binary with Metrics Generator -> Mimir)
+replicas: 1
+
+persistence:
+  enabled: true
+  size: 5Gi
+
+tempo:
+  reportingEnabled: false
+  metricsGenerator:
+    enabled: true
+    remoteWriteUrl: "http://mimir.observability.svc.cluster.local:8080/api/v1/push"
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "0.0.0.0:4317"
+        http:
+          endpoint: "0.0.0.0:4318"
+  # Enable service-graphs and span-metrics processors and send exemplars to Mimir
+  overrides:
+    defaults:
+      metrics_generator:
+        processors:
+          - service-graphs
+          - span-metrics
+          - local-blocks
+  extraConfig:
+    metrics_generator:
+      storage:
+        path: /var/tempo/generator/wal
+        remote_write:
+          - url: "http://mimir.observability.svc.cluster.local:8080/api/v1/push"
+            send_exemplars: true
+      traces_storage:
+        path: /var/tempo/generator/traces
+      processor:
+        service_graphs:
+          wait: 10s
+          max_items: 10000
+          dimensions:
+            - http.method
+            - http.status_code
+        span_metrics:
+          dimensions:
+            - http.method
+            - http.status_code
+            - loan.type
+            - loan.decision
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
