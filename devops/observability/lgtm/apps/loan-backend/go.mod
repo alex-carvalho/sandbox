@@ -3,6 +3,7 @@ module loan-backend
 go 1.23.0
 
 require (
+	github.com/XSAM/otelsql v0.37.0
 	github.com/lib/pq v1.10.9
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.59.0
 	go.opentelemetry.io/otel v1.34.0

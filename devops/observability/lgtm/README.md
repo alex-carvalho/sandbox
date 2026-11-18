@@ -2,10 +2,14 @@
 
 A complete local Proof of Concept for the **Grafana LGTM** observability stack (**L**oki, **G**rafana, **T**empo, **M**imir) collected via **Grafana Alloy** on a local **Kind** Kubernetes cluster, featuring a 3-tier polyglot architecture with **PostgreSQL**:
 
-- **`loan-frontend` (Node.js / Express)**: Interactive Web Portal & API Gateway (`http://localhost:8080`)
-- **`loan-backend` (Go)**: Loan Orchestrator & PostgreSQL Persistence (`SELECT`, `INSERT`, `UPDATE`, slow analytical queries, and SQL constraint errors)
-- **`loan-underwriting` (Python / FastAPI)**: Fraud Blacklist verification (PostgreSQL), External Credit Bureau client, and Actuarial Risk Engine
-- **`postgres` (PostgreSQL 16)**: Relational database with full SQL span and query-duration instrumentation
+- **`loan-frontend` (Node.js / Express)**: Interactive Web Portal & API Gateway (`http://localhost:8080`) with automatic `fetch` trace context propagation and background load control (Start/Pause/Speed)
+- **`loan-backend` (Go)**: Loan Orchestrator & PostgreSQL Persistence (`SELECT`, `INSERT`, `UPDATE`, slow analytical queries, and SQL constraint errors) + Business KPI metrics (`loan_decisions_total`, `loan_requested_amount_dollars`)
+- **`loan-underwriting` (Python / FastAPI)**: Fraud Blacklist verification (PostgreSQL via `psycopg2` auto-instrumentation), External Credit Bureau client, and Actuarial Risk Engine
+- **`postgres` (PostgreSQL 17)**: Relational database whose SQL RED metrics and latency histograms (`traces_spanmetrics_*`) are automatically derived by **Grafana Tempo's `metrics-generator`**
+
+### Telemetry Architecture: Automatic APM vs. Manual Business Metrics
+- **Technical APM Metrics (Zero Manual Metric Code)**: Request throughput, HTTP error rates, per-service latency (P50/P95), PostgreSQL query latency (`db_system="postgresql"`), and Service Graph edges are generated **automatically** by Tempo `metrics-generator` (`span-metrics` & `service-graphs` processors) with Exemplars pushed to Mimir every `5s`.
+- **Business KPIs (Manual OTel Metrics)**: Only domain metrics that an APM cannot infer (`loan_decisions_total` and `loan_requested_amount_dollars`) are explicitly emitted in `loan-backend`.
 
 See [DESIGN.md](./DESIGN.md) for the full architecture and correlation design.
 

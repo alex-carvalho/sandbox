@@ -84,7 +84,7 @@
           ]
         }
       },
-      "title": "Loan Application Throughput",
+      "title": "Loan Application Throughput — APM Span Metrics",
       "type": "stat",
       "targets": [
         {
@@ -92,7 +92,7 @@
             "type": "prometheus",
             "uid": "mimir"
           },
-          "expr": "sum(rate(loan_frontend_requests_total[1m]))",
+          "expr": "sum(rate(traces_spanmetrics_calls_total{service=\"loan-frontend\", span_kind=\"SPAN_KIND_SERVER\"}[1m]))",
           "refId": "A"
         }
       ]
@@ -143,7 +143,7 @@
           ]
         }
       },
-      "title": "Loan Approval Rate",
+      "title": "Loan Approval Rate — Business KPI",
       "type": "stat",
       "targets": [
         {
@@ -202,7 +202,7 @@
           ]
         }
       },
-      "title": "Error Rate (Fraud / Timeout / SQL Error)",
+      "title": "Application Error Rate — APM Span Metrics",
       "type": "stat",
       "targets": [
         {
@@ -210,7 +210,7 @@
             "type": "prometheus",
             "uid": "mimir"
           },
-          "expr": "100 * sum(rate(loan_frontend_requests_total{status=\"error\"}[5m])) / clamp_min(sum(rate(loan_frontend_requests_total[5m])), 0.001)",
+          "expr": "100 * sum(rate(traces_spanmetrics_calls_total{service=\"loan-frontend\", span_kind=\"SPAN_KIND_SERVER\", status_code=\"STATUS_CODE_ERROR\"}[5m])) / clamp_min(sum(rate(traces_spanmetrics_calls_total{service=\"loan-frontend\", span_kind=\"SPAN_KIND_SERVER\"}[5m])), 0.001)",
           "refId": "A"
         }
       ]
@@ -253,7 +253,7 @@
           ]
         }
       },
-      "title": "Requested Loan Volume / min",
+      "title": "Requested Loan Volume / min — Business KPI",
       "type": "stat",
       "targets": [
         {
@@ -309,7 +309,7 @@
           "sort": "desc"
         }
       },
-      "title": "End-to-End Underwriting Latency (P50 / P95 / P99) + Trace Exemplars",
+      "title": "Service Latency P50 / P95 + Trace Exemplars (Tempo Span Metrics)",
       "type": "timeseries",
       "targets": [
         {
@@ -318,8 +318,8 @@
             "uid": "mimir"
           },
           "exemplar": true,
-          "expr": "histogram_quantile(0.95, sum(rate(loan_underwriting_duration_seconds_bucket[1m])) by (le))",
-          "legendFormat": "P95 Underwriting Latency (Exemplars)",
+          "expr": "histogram_quantile(0.95, sum by (le, service) (rate(traces_spanmetrics_latency_bucket{service=~\"loan-frontend|loan-backend|loan-underwriting\", span_kind=\"SPAN_KIND_SERVER\"}[1m])))",
+          "legendFormat": "P95 {{service}} (Exemplars)",
           "refId": "A"
         },
         {
@@ -328,19 +328,9 @@
             "uid": "mimir"
           },
           "exemplar": false,
-          "expr": "histogram_quantile(0.50, sum(rate(loan_underwriting_duration_seconds_bucket[1m])) by (le))",
-          "legendFormat": "P50 Underwriting Latency",
+          "expr": "histogram_quantile(0.50, sum by (le, service) (rate(traces_spanmetrics_latency_bucket{service=~\"loan-frontend|loan-backend|loan-underwriting\", span_kind=\"SPAN_KIND_SERVER\"}[1m])))",
+          "legendFormat": "P50 {{service}}",
           "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "mimir"
-          },
-          "exemplar": false,
-          "expr": "histogram_quantile(0.99, sum(rate(loan_underwriting_duration_seconds_bucket[1m])) by (le))",
-          "legendFormat": "P99 Underwriting Latency",
-          "refId": "C"
         }
       ]
     },
@@ -387,7 +377,7 @@
           "sort": "desc"
         }
       },
-      "title": "PostgreSQL Query Latency by SQL Operation (P95 + Exemplars)",
+      "title": "PostgreSQL Query Latency by SQL Operation + Exemplars (Tempo Span Metrics)",
       "type": "timeseries",
       "targets": [
         {
@@ -396,8 +386,8 @@
             "uid": "mimir"
           },
           "exemplar": true,
-          "expr": "histogram_quantile(0.95, sum by (le, db_operation, table) (rate(loan_db_query_duration_seconds_bucket[1m])))",
-          "legendFormat": "P95 SQL {{db_operation}} on {{table}}",
+          "expr": "histogram_quantile(0.95, sum by (le, service, db_operation, span_name) (rate(traces_spanmetrics_latency_bucket{db_system=\"postgresql\"}[1m])))",
+          "legendFormat": "P95 {{service}} | {{db_operation}} ({{span_name}})",
           "refId": "A"
         }
       ]
@@ -440,7 +430,7 @@
           "mode": "multi"
         }
       },
-      "title": "Decisions & Error Scenarios (APPROVED / FRAUD / TIMEOUT / DB_ERROR)",
+      "title": "Business Decisions & Error Scenarios — Manual Business Metric",
       "type": "timeseries",
       "targets": [
         {
@@ -448,8 +438,8 @@
             "type": "prometheus",
             "uid": "mimir"
           },
-          "expr": "sum by (decision) (rate(loan_decisions_total[1m]))",
-          "legendFormat": "{{decision}}",
+          "expr": "sum by (decision, loan_type) (rate(loan_decisions_total[1m]))",
+          "legendFormat": "{{decision}} ({{loan_type}})",
           "refId": "A"
         }
       ]

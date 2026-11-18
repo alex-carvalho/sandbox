@@ -11,12 +11,15 @@ This Proof of Concept (POC) demonstrates a full-fidelity **Grafana LGTM** observ
   - `loan-frontend` (**Node.js / Express**): User-facing web portal & API gateway (`POST /api/loans/apply`, `GET /api/loans/history`).
   - `loan-backend` (**Go**): Core Loan Orchestrator & PostgreSQL persistence service (`POST /underwrite`, `GET /loans`).
   - `loan-underwriting` (**Python / FastAPI**): Dedicated Risk, Fraud Blacklist (PostgreSQL), and External Credit Bureau Engine (`POST /evaluate`).
-  - `postgres` (**PostgreSQL 16**): Relational database storing `loan_applications` and `fraud_blacklist` to demonstrate SQL query latency analysis (`SELECT`, `INSERT`, `UPDATE`, slow `pg_sleep` queries, and SQL constraint errors).
+  - `postgres` (**PostgreSQL 17**): Relational database storing `loan_applications` and `fraud_blacklist` to demonstrate SQL query latency analysis (`SELECT`, `INSERT`, `UPDATE`, slow `pg_sleep` queries, and SQL constraint errors).
   - `loan-traffic-gen`: Automated traffic generator continuously submitting normal, slow DB, fraud, timeout, and SQL error scenarios.
 - **Unified Telemetry Collection**: Grafana Alloy receiving OTLP Logs, Metrics, and Traces + enriching with Kubernetes metadata.
+- **Separation of Automatic APM vs. Manual Business Telemetry**:
+  - **Automatic Technical APM Telemetry**: HTTP latency, throughput, error rates, PostgreSQL SQL query latency (`db.system="postgresql"`), and Service Graph edges are **not** manually instrumented as metrics in application code. Instead, **Grafana Tempo's `metrics-generator`** (`span-metrics` and `service-graphs` processors) derives `traces_spanmetrics_*` and `traces_service_graph_*` (with Exemplars) automatically every `5s` from auto-instrumented HTTP/SQL spans.
+  - **Manual Business KPIs**: Only domain-specific metrics that an APM agent cannot infer on its own (`loan_decisions_total` and `loan_requested_amount_dollars`) are emitted manually by `loan-backend`.
 - **Full Cross-Signal Correlation**:
-  - **Metrics $\rightarrow$ Traces**: OpenTelemetry histogram **Exemplars** stored in Mimir linking directly to Tempo traces (including both end-to-end underwriting latency and PostgreSQL SQL query latency).
-  - **Traces $\rightarrow$ Logs**: Tempo `tracesToLogsV2` jumping directly to Loki logs filtered by `service_name` and `trace_id`.
+  - **Metrics $\rightarrow$ Traces**: Both Tempo-derived Span Metrics (`traces_spanmetrics_latency_bucket`) and Business KPI histograms include **Exemplars** stored in Mimir linking directly to Tempo traces.
+  - **Traces $\rightarrow$ Logs**: Tempo `tracesToLogsV2` jumping directly to Loki logs filtered by `service_name` and `trace_id` (with zero PII logged).
   - **Logs $\rightarrow$ Traces**: Structured JSON logs in Loki with `trace_id` extracted via `derivedFields` linking back to Tempo.
   - **Traces $\rightarrow$ Metrics**: Tempo `metrics-generator` producing **Span RED Metrics** (`traces_spanmetrics_*`) and **Service Graphs** (`traces_service_graph_*`) across `loan-frontend` $\rightarrow$ `loan-backend` $\rightarrow$ `loan-underwriting` $\rightarrow$ `postgresql` & `experian-credit-bureau`.
 
@@ -30,7 +33,7 @@ flowchart LR
         TG["loan-traffic-gen"] -->|HTTP| FE["loan-frontend<br/>(Node.js + OTel)"]
         FE -->|HTTP + W3C TraceContext| BE["loan-backend<br/>(Go + OTel)"]
         BE -->|HTTP + W3C TraceContext| UW["loan-underwriting<br/>(Python FastAPI + OTel)"]
-        BE -->|SQL: SELECT / INSERT / UPDATE| PG[("PostgreSQL 16<br/>(loandb)")]
+        BE -->|SQL: SELECT / INSERT / UPDATE| PG[("PostgreSQL 17<br/>(loandb)")]
         UW -->|SQL: SELECT fraud_blacklist| PG
     end
 
@@ -68,4 +71,4 @@ The application supports deterministic error and latency triggers based on eithe
 | **2. Slow Database Query Bottleneck** | `amount > 900000` or Name with `"Slow"` | `"slow_db"` | `loan-backend` executes `postgres.slow_portfolio_exposure_analysis` (`SELECT pg_sleep(0.85), ...`) | ~850ms DB span clearly visible in Tempo waterfall + Exemplar spike on **PostgreSQL Query Latency** panel |
 | **3. Fraud Blacklist Alert (`403`)** | Applicant Name containing `"Fraud"` or `"Blacklist"` | `"fraud_error"` | `loan-underwriting` queries `fraud_blacklist` table in PostgreSQL and raises `PermissionError` | `403 Forbidden`, red error spans in `loan-underwriting` & `loan-backend`, `SECURITY ALERT` JSON error log in Loki |
 | **4. Credit Bureau Timeout (`504`)** | `credit_score < 450` | `"bureau_timeout"` | `loan-underwriting` span `credit-bureau.external_lookup` (`peer.service="experian-credit-bureau"`) times out | `504 Gateway Timeout`, red edge to `experian-credit-bureau` in Tempo Service Graph |
-| **5. PostgreSQL SQL Constraint Error (`500`)** | `amount == 666` or `amount < 0` | `"db_error"` | `loan-backend` span `postgres.insert_loan_application` violates `CHECK (amount > 0 AND amount <> 666)` | `500 Internal Server Error`, PostgreSQL constraint exception recorded on span + `loan_db_errors_total` counter |
+| **5. PostgreSQL SQL Constraint Error (`500`)** | `amount == 666` or `amount < 0` | `"db_error"` | `loan-backend` span `postgres.insert_loan_application` violates `CHECK (amount > 0 AND amount <> 666)` | `500 Internal Server Error`, PostgreSQL constraint exception recorded on span + `traces_spanmetrics_calls_total{status_code="STATUS_CODE_ERROR"}` & `loan_decisions_total{decision="DB_ERROR"}` |

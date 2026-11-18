@@ -5,10 +5,7 @@ const express = require('express');
 const {
   trace,
   context,
-  propagation,
-  SpanKind,
   SpanStatusCode,
-  metrics,
 } = require('@opentelemetry/api');
 const { logs, SeverityNumber } = require('@opentelemetry/api-logs');
 
@@ -17,7 +14,6 @@ const PORT = process.env.PORT || 8080;
 const BACKEND_URL = process.env.LOAN_BACKEND_URL || 'http://loan-backend.loan-app.svc.cluster.local:8081';
 
 const tracer = trace.getTracer(SERVICE_NAME);
-const meter = metrics.getMeter(SERVICE_NAME);
 const otelLogger = logs.getLogger(SERVICE_NAME);
 
 // Traffic Generator State controlled from the Frontend UI
@@ -29,62 +25,6 @@ const loadState = {
   last_decision: 'APPROVED',
   updated_at: new Date().toISOString(),
 };
-
-// OpenTelemetry Metrics
-const requestsCounter = meter.createCounter('loan_frontend_requests', {
-  description: 'Total loan applications received by Node.js loan-frontend',
-});
-
-const requestDurationHist = meter.createHistogram('loan_frontend_request_duration', {
-  description: 'End-to-end loan application request duration on Node.js frontend (seconds)',
-  unit: 's',
-  advice: {
-    explicitBucketBoundaries: [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0],
-  },
-});
-
-// Helper that wraps Node global fetch() in an OpenTelemetry CLIENT span
-// and explicitly injects W3C TraceContext (traceparent / tracestate) headers
-// so loan-backend and loan-underwriting continue the exact same distributed trace.
-async function tracedFetch(spanName, url, options = {}) {
-  return tracer.startActiveSpan(
-    spanName,
-    {
-      kind: SpanKind.CLIENT,
-      attributes: {
-        'http.method': options.method || 'GET',
-        'http.url': url,
-        'peer.service': 'loan-backend',
-        'server.address': 'loan-backend',
-      },
-    },
-    async (clientSpan) => {
-      const headers = { ...(options.headers || {}) };
-      propagation.inject(context.active(), headers);
-
-      try {
-        const response = await fetch(url, {
-          ...options,
-          headers,
-        });
-        clientSpan.setAttribute('http.status_code', response.status);
-        if (response.status >= 400) {
-          clientSpan.setStatus({
-            code: SpanStatusCode.ERROR,
-            message: `HTTP ${response.status}`,
-          });
-        }
-        return response;
-      } catch (err) {
-        clientSpan.recordException(err);
-        clientSpan.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
-        throw err;
-      } finally {
-        clientSpan.end();
-      }
-    }
-  );
-}
 
 function emitJsonLog(level, msg, extraFields = {}) {
   const activeSpan = trace.getSpan(context.active());
@@ -162,11 +102,7 @@ app.get('/api/loans/history', async (_req, res) => {
   const start = performance.now();
   const activeSpan = trace.getSpan(context.active());
   try {
-    const response = await tracedFetch(
-      'HTTP GET loan-backend/loans',
-      `${BACKEND_URL}/loans?limit=15`,
-      { method: 'GET' }
-    );
+    const response = await fetch(`${BACKEND_URL}/loans?limit=15`, { method: 'GET' });
     const data = await response.json();
     emitJsonLog('INFO', 'Fetched recent loan applications from backend DB', {
       count: Array.isArray(data.items) ? data.items.length : 0,
@@ -185,7 +121,6 @@ app.get('/api/loans/history', async (_req, res) => {
 
 // Submit loan application -> Go Backend -> Python Underwriting + PostgreSQL
 app.post('/api/loans/apply', async (req, res) => {
-  const startTime = performance.now();
   const appId = `LN-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
   const activeSpan = trace.getSpan(context.active());
   const traceId = activeSpan ? activeSpan.spanContext().traceId : '';
@@ -255,34 +190,16 @@ app.post('/api/loans/apply', async (req, res) => {
   };
 
   try {
-    const response = await tracedFetch(
-      'HTTP POST loan-backend/underwrite',
-      `${BACKEND_URL}/underwrite`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      }
-    );
+    const response = await fetch(`${BACKEND_URL}/underwrite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
 
     const data = await response.json();
     data.trace_id = traceId || data.trace_id;
 
-    const durationSec = (performance.now() - startTime) / 1000.0;
     const isError = response.status >= 400;
-    const statusLabel = isError ? 'error' : 'success';
-
-    requestsCounter.add(1, {
-      loan_type,
-      status: statusLabel,
-      decision: data.decision || 'ERROR',
-      scenario: effectiveMode,
-    });
-    requestDurationHist.record(durationSec, {
-      loan_type,
-      status: statusLabel,
-      scenario: effectiveMode,
-    });
 
     if (isError) {
       if (activeSpan) {
@@ -314,22 +231,10 @@ app.post('/api/loans/apply', async (req, res) => {
 
     return res.status(200).json(data);
   } catch (err) {
-    const durationSec = (performance.now() - startTime) / 1000.0;
     if (activeSpan) {
       activeSpan.recordException(err);
       activeSpan.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
     }
-    requestsCounter.add(1, {
-      loan_type,
-      status: 'error',
-      decision: 'ERROR',
-      scenario: effectiveMode,
-    });
-    requestDurationHist.record(durationSec, {
-      loan_type,
-      status: 'error',
-      scenario: effectiveMode,
-    });
     emitJsonLog('ERROR', `Unhandled exception calling loan-backend: ${err.message}`, {
       application_id: appId,
       loan_type,

@@ -11,16 +11,13 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from opentelemetry import metrics, trace
+from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -52,30 +49,6 @@ tracer_provider.add_span_processor(
 )
 trace.set_tracer_provider(tracer_provider)
 tracer = trace.get_tracer(SERVICE_NAME)
-
-metric_reader = PeriodicExportingMetricReader(
-    OTLPMetricExporter(endpoint=OTLP_ENDPOINT, insecure=True),
-    export_interval_millis=5000,
-)
-meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
-metrics.set_meter_provider(meter_provider)
-meter = metrics.get_meter(SERVICE_NAME)
-
-underwriting_eval_duration = meter.create_histogram(
-    name="loan_underwriting_service_duration",
-    description="Duration of loan-underwriting risk evaluation in seconds",
-    unit="s",
-)
-db_query_duration = meter.create_histogram(
-    name="loan_db_query_duration",
-    description="PostgreSQL SQL query execution duration in seconds",
-    unit="s",
-)
-underwriting_errors_counter = meter.create_counter(
-    name="loan_underwriting_errors",
-    description="Total underwriting errors by error_type and loan_type",
-    unit="1",
-)
 
 logger_provider = LoggerProvider(resource=resource)
 logger_provider.add_log_record_processor(
@@ -172,15 +145,6 @@ def check_fraud_blacklist_in_db(req: UnderwriteInput) -> tuple[bool, str, float]
             row = None
 
         elapsed = time.perf_counter() - db_start
-        db_query_duration.record(
-            elapsed,
-            {
-                "service": SERVICE_NAME,
-                "db_operation": "SELECT",
-                "table": "fraud_blacklist",
-                "scenario": req.simulate_mode or "normal",
-            },
-        )
 
         is_fraud = (
             row is not None
@@ -237,14 +201,6 @@ def evaluate_loan(req: UnderwriteInput):
     # 1. PostgreSQL Fraud Blacklist Check
     is_fraud, fraud_reason, fraud_db_ms = check_fraud_blacklist_in_db(req)
     if is_fraud:
-        duration = time.perf_counter() - start_time
-        underwriting_eval_duration.record(
-            duration,
-            {"loan_type": req.loan_type, "decision": "FRAUD_BLOCKED", "scenario": "fraud_error"},
-        )
-        underwriting_errors_counter.add(
-            1, {"error_type": "fraud_blacklist", "loan_type": req.loan_type}
-        )
         current_span.set_status(Status(StatusCode.ERROR, fraud_reason))
         emit_json_log(
             "ERROR",
@@ -291,18 +247,6 @@ def evaluate_loan(req: UnderwriteInput):
             bureau_span.set_status(Status(StatusCode.ERROR, err_msg))
             current_span.set_status(Status(StatusCode.ERROR, err_msg))
 
-            duration = time.perf_counter() - start_time
-            underwriting_eval_duration.record(
-                duration,
-                {
-                    "loan_type": req.loan_type,
-                    "decision": "BUREAU_TIMEOUT",
-                    "scenario": "bureau_timeout",
-                },
-            )
-            underwriting_errors_counter.add(
-                1, {"error_type": "bureau_timeout", "loan_type": req.loan_type}
-            )
             emit_json_log(
                 "ERROR",
                 "Credit bureau verification failed with gateway timeout",
@@ -384,14 +328,6 @@ def evaluate_loan(req: UnderwriteInput):
         )
 
     duration = time.perf_counter() - start_time
-    underwriting_eval_duration.record(
-        duration,
-        {
-            "loan_type": req.loan_type,
-            "decision": decision,
-            "scenario": req.simulate_mode or "normal",
-        },
-    )
 
     emit_json_log(
         "INFO",

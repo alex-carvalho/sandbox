@@ -1,8 +1,8 @@
 FROM golang:1.24-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum* ./
-COPY main.go ./
-RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -o /loan-backend main.go
+COPY *.go ./
+RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -o /loan-backend .
 
 FROM alpine:3.20
 RUN apk --no-cache add ca-certificates

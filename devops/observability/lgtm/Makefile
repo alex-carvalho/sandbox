@@ -53,7 +53,8 @@ deploy-lgtm:
 		-n $(NAMESPACE_OBS) \
 		-f ./helm/grafana-values.yaml \
 		--wait --timeout 5m
-	kubectl rollout restart deployment/alloy deployment/grafana -n $(NAMESPACE_OBS)
+	kubectl rollout restart statefulset/tempo deployment/alloy deployment/grafana -n $(NAMESPACE_OBS)
+	kubectl rollout status statefulset/tempo -n $(NAMESPACE_OBS) --timeout=2m
 	kubectl rollout status deployment/alloy -n $(NAMESPACE_OBS) --timeout=2m
 	kubectl rollout status deployment/grafana -n $(NAMESPACE_OBS) --timeout=2m
 
