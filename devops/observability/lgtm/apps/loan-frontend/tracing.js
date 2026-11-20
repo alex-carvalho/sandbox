@@ -3,7 +3,7 @@
 const { trace, context, propagation, SpanKind, SpanStatusCode } = require('@opentelemetry/api');
 const { W3CTraceContextPropagator, W3CBaggagePropagator, CompositePropagator } = require('@opentelemetry/core');
 const { NodeSDK } = require('@opentelemetry/sdk-node');
-const { Resource } = require('@opentelemetry/resources');
+const { resourceFromAttributes } = require('@opentelemetry/resources');
 const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-grpc');
 const { OTLPMetricExporter } = require('@opentelemetry/exporter-metrics-otlp-grpc');
 const { OTLPLogExporter } = require('@opentelemetry/exporter-logs-otlp-grpc');
@@ -23,7 +23,7 @@ const textMapPropagator = new CompositePropagator({
 });
 propagation.setGlobalPropagator(textMapPropagator);
 
-const resource = new Resource({
+const resource = resourceFromAttributes({
   'service.name': SERVICE_NAME,
   'service.namespace': 'loan-app',
   'service.version': '2.0.0',
@@ -34,8 +34,10 @@ const traceExporter = new OTLPTraceExporter({ url: endpoint });
 const metricExporter = new OTLPMetricExporter({ url: endpoint });
 const logExporter = new OTLPLogExporter({ url: endpoint });
 
-const loggerProvider = new LoggerProvider({ resource });
-loggerProvider.addLogRecordProcessor(new BatchLogRecordProcessor(logExporter));
+const loggerProvider = new LoggerProvider({
+  resource,
+  processors: [new BatchLogRecordProcessor(logExporter)],
+});
 logs.setGlobalLoggerProvider(loggerProvider);
 
 const sdk = new NodeSDK({
